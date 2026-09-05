@@ -1,0 +1,31 @@
+# Token kind는 어휘로 확정되는 구분만 담는다
+
+`DartTokenKind`는 8개다: `plain` `comment` `keyword` `string` `number` `punctuation` `escape` `function`. 어떤 구분을 kind로 승격할지는 **스캐너가 문자만 보고 확실하게 정할 수 있는가**로 갈랐다 — 유명 테마 9종이 실제로 그것을 다르게 칠하는지도 함께 봤지만, 그건 필요조건이지 충분조건이 아니다. 어휘로 정해지지 않는 구분은 아무리 널리 칠해져도 넣지 않는다. 반쯤 맞는 답은 읽는 사람이 믿어 버리기 때문에, 답이 없는 것보다 나쁘다.
+
+## Considered Options
+
+**`type` vs `variable`을 넣는다** — 조사한 테마 **9/9 전부**가 이 둘을 다른 색으로 칠한다. 가장 눈에 띄는 구분이고, 넣지 않으면 "다른 하이라이터보다 밋밋하다"는 인상을 준다. 그런데 공식 Dart TextMate 문법(`dart-lang/dart-syntax-highlight`)이 그것을 정하는 규칙은 `[_$]*[A-Z][a-zA-Z0-9_$]*` — **대문자로 시작하면 타입**이라는 관습 기반 추측이다. `const PI`, enum 값, 제네릭 파라미터에서 틀린다. 어휘로 확실한 것은 `int double bool num dynamic void` 고정 목록뿐인데, 9개 테마 모두 그것들을 사용자 정의 타입과 같은 색으로 칠하므로 그 조각만으로는 아무 시각적 이득이 없다. **거부.**
+
+**`annotation`(`@override`)을 넣는다** — `@` 다음 식별자라 어휘적으로 완벽하다. 그런데 조사해 보니 Dart에서 이것을 다르게 칠하는 테마가 **0/9**다. 테마들의 decorator 규칙은 Java/Python 전용이라 Dart의 `storage.type.annotation.dart`에 닿지 않는다. 어휘 조건은 통과하지만 아무도 쓰지 않는다. **거부.**
+
+**`operator`를 `punctuation`에서 분리한다** — 어휘적으로 자명하다. 그러나 합의가 없다: 1/9만 고유색, 6/9는 keyword와 같은 색, 2/9는 명시적으로 plain으로 되돌린다. 나눠도 팔레트가 뭘 해야 할지 정해지지 않는다. **거부.**
+
+**`interpolation`을 kind로 넣는다** — 처음에는 가장 유력한 후보였다. 8/9 테마가 보간 구간을 문자열과 다르게 칠하고, 스캐너의 `_stringEnd`와 `_interpolationEnd`가 이미 그 경계를 계산해 놓고 버리고 있었다. **그런데 보간 안을 재귀적으로 토큰화하기로 하자 필요가 사라졌다** — 아래 참조.
+
+## Consequences
+
+**보간 안은 재귀적으로 토큰화된다.** `'${term.value ? '✓' : '✗'}'`는 토큰 하나가 아니라 `string` / `punctuation` / `plain` / `string` / … 의 열이 된다. 테마들이 하는 일이 *"보간 안에서 문자열 색을 끄고 기본 전경색으로 되돌리기"*인데, 내용물이 그냥 보통 토큰이 되면서 그게 저절로 달성된다. 그래서 `interpolation` kind는 존재하지 않는다 — **없어서 못 하는 게 아니라, 할 일이 없어서 없다.** 이 파일이 없으면 다음 사람이 반드시 "왜 보간 kind가 없지"라고 물을 지점이다.
+
+**대신 그 열이 이 패키지의 주장을 화면에서 증명한다.** 중첩된 `'✓'`가 문자열로 그려진다. quote-pair 정규식 스캐너는 정확히 그 반대로 칠한다 — 보간 안의 코드를 문자열로, 문자열을 코드로.
+
+**doc comment의 한 문장이 거짓이 되었다.** 참조 구현은 *"A whole literal is one token, interpolations included"*라고 적어 두었다. 이제 아니다. 그 문장이 떠받치던 논증(`_stringEnd`와 `_interpolationEnd`의 상호 재귀가 경계를 맞게 찾는다)은 변하지 않았고, 오히려 토큰으로 눈에 보이게 되었다. 문장만 다시 쓴다.
+
+**partition 성질은 그대로다.** 토큰을 더 잘게 쪼개도 전부 기록된 오프셋에서 잘라 내므로, 이어 붙이면 여전히 입력과 바이트 단위로 같다.
+
+**이 목록은 사실상 영구적이다.** Dart enum에 값을 추가하는 것은 소비자의 전수 `switch`를 깨뜨리므로, pub 공개 후에는 breaking change다. "나중에 필요하면 넣는다"가 성립하지 않아서, 조사가 근거를 준 시점에 못 박았다. 참고로 무리한 확장은 아니다 — 조사한 테마들은 전경색을 11~18개 갖지만 **Dart 파일 안에 실제로 나타나는 것은 7~10개**이고, 8은 그 한가운데다.
+
+**`function`만 스캐너의 동작을 늘린다.** 나머지 일곱은 스캐너가 이미 아는 것을 내보내기만 하면 되지만, `function`은 `(` 앞을 보는 lookahead 분기를 새로 넣는다. 이 결정에서 유일하게 회귀 위험이 있는 자리이므로, mutation testing이 가장 필요한 곳이다.
+
+---
+
+*근거가 된 측정: [유명 syntax 테마는 실제로 무엇을 구분해 칠하는가](https://github.com/kihyun1998/flutter_syntax_highlight/issues/3) (2026-09-05). 결정: [DartTokenKind의 최종 목록](https://github.com/kihyun1998/flutter_syntax_highlight/issues/5).*
