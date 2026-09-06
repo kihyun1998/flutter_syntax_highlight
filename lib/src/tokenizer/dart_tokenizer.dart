@@ -61,8 +61,10 @@
 /// 따옴표를 단순히 짝지으면 세 번째가 문자열 / `✓`는 코드 / ` : `는 문자열 /
 /// `✗`는 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이 보여주려는 바로 그
 /// 두 글자에서. 그래서 [_stringEnd]와 [_interpolationEnd]는 **상호 재귀**다:
-/// 보간은 중첩 문자열을 이해하는 중괄호 카운터로 스캔된다. 리터럴 하나가 보간을
-/// 포함해 토큰 하나다.
+/// 보간은 중첩 문자열을 이해하는 중괄호 카운터로 스캔된다.
+///
+/// 보간은 아직 바깥 문자열 토큰 안에 들어 있다. 다만 리터럴이 통째로 토큰
+/// 하나인 것은 더 이상 아니다 — [DartTokenKind.escape]가 그 안에서 잘려 나간다.
 library;
 
 /// 한 구간의 문자들이 무엇인지 — 다르게 그리기 위한 목적에 한해서.
@@ -84,12 +86,13 @@ enum DartTokenKind {
   /// 예약어, 내장 식별자, 또는 문맥 키워드.
   keyword,
 
-  /// 문자열 리터럴 전체. 보간을 포함한다.
+  /// 문자열 리터럴 중 [escape]로 잘려 나가지 않은 부분.
   ///
-  /// **현재 판본의 동작이며, 바뀔 예정이다.** 보간 안을 재귀적으로 토큰화하기로
-  /// 결정되어 있고, 그러면 `'\${a}'`는 토큰 하나가 아니라 여러 토큰이 된다.
+  /// **더 이상 리터럴 전체가 아니다.** `escape`가 생기면서 `'a\n'`은 `'a` /
+  /// `\n` / `'` 세 토큰이 된다. 보간은 아직 이 토큰 안에 들어 있으나 그것도
+  /// 바뀔 예정이다 — 보간 안을 재귀적으로 토큰화하기로 결정되어 있다.
   /// `docs/adr/0001-token-kinds-are-lexical-only.md`의 Consequences가 이 문장을
-  /// 이름으로 짚어 두었다.
+  /// 이름으로 짚어 두었고, 여기 두 번에 걸쳐 반영된다.
   string,
 
   /// 정수, 실수, 또는 16진 리터럴.
@@ -107,8 +110,8 @@ enum DartTokenKind {
   /// 여는 괄호 **바로 앞**의 식별자.
   ///
   /// 어휘적 위치이지 의미 분류가 아니다. 함수 호출, 생성자 호출, 메서드 선언이
-  /// 전부 여기로 온다 — 스캐너는 그 셋을 구분하지 않고, 조사한 테마들도 같은
-  /// 색으로 칠한다. 사이에 공백이 끼면 호출로 보지 않는다.
+  /// 전부 여기로 온다 — 스캐너는 그 셋을 구분하지 않는다. 사이에 공백이 끼면
+  /// 호출로 보지 않는다.
   ///
   /// 키워드가 먼저 잡히므로 `if(x)`의 `if`는 [keyword]다.
   function,
@@ -176,8 +179,14 @@ List<DartToken> tokenizeDart(String source) {
           end < source.length &&
           (source.codeUnitAt(end) == _singleQuote ||
               source.codeUnitAt(end) == _doubleQuote)) {
-        kind = DartTokenKind.string;
-        i = _stringEnd(source, end, raw: true);
+        // 원시 문자열도 escape 경로를 지난다. `raw`가 기록을 막으므로 결과는
+        // 토큰 하나로 같지만, 특례를 없애야 "원시 문자열에서는 escape가 나오지
+        // 않는다"는 검사가 구조 때문이 아니라 `raw` 판정 때문에 통과하게 된다.
+        final escapes = <int>[];
+        final end2 = _stringEnd(source, end, raw: true, escapes: escapes);
+        _emitStringRun(i, end2, escapes, kinds, ends);
+        i = end2;
+        continue;
       } else {
         // 키워드를 **먼저** 본다. 이 순서가 뒤집히면 `if(x)`의 `if`가 함수
         // 이름으로 칠해진다 — `for`, `while`, `switch`, `catch`도 마찬가지라
@@ -229,6 +238,10 @@ List<DartToken> tokenizeDart(String source) {
 /// 여기서 하는 일은 그 위치들로 구간을 자르는 것뿐 — 문자열의 범위를 다시
 /// 계산하지 않는다. 두 곳이 범위를 따로 정하면 어긋날 수 있고, partition은
 /// 그 어긋남을 그대로 드러낸다.
+///
+/// 기록된 위치는 언제나 `end`보다 앞이다. [_stringEnd]가 스캔을 마친 지점을
+/// `end`로 돌려주고 기록은 그 스캔 도중에만 일어나기 때문이다. 파일 끝에서
+/// 잘린 escape는 아래의 `stop` 클램프가 받는다.
 void _emitStringRun(
   int start,
   int end,
@@ -238,8 +251,6 @@ void _emitStringRun(
 ) {
   var at = start;
   for (final e in escapes) {
-    // 파일 끝에서 잘린 escape는 `end`를 넘어갈 수 있다.
-    if (e >= end) break;
     if (e > at) {
       kinds.add(DartTokenKind.string);
       ends.add(e);
@@ -375,7 +386,13 @@ int _interpolationEnd(
   while (j < source.length) {
     final c = source.codeUnitAt(j);
     if (c == _singleQuote || c == _doubleQuote) {
-      j = _stringEnd(source, j, raw: false, escapes: escapes);
+      // `r` 접두사를 여기서도 본다. 바깥 루프와 같은 규칙이다 — 식별자가 이어질
+      // 수 없었던 자리의 `r`만 접두사다. 이것을 보지 않으면 보간 안의 원시
+      // 문자열이 escape를 처리하는 문자열로 스캔되어, 닫는 따옴표를 지나쳐
+      // 경계가 어긋나고 `escape` kind까지 잘못 붙는다.
+      final raw = source.codeUnitAt(j - 1) == _lowerR &&
+          (j - 2 < 0 || !_isIdentifierPart(source.codeUnitAt(j - 2)));
+      j = _stringEnd(source, j, raw: raw, escapes: escapes);
       continue;
     }
     // 감싸고 있는 리터럴에서 물려받는다. 이것이 없으면 `'${oops`가

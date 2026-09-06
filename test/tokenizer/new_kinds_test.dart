@@ -15,7 +15,7 @@ List<String> textsOf(String source, DartTokenKind kind) => tokenizeDart(source)
     .toList();
 
 void main() {
-  group('escape — 어휘로 확정되고, 조사한 테마 9/9가 다르게 칠한다', () {
+  group('escape — 어휘로 확정된다', () {
     test('문자열이 string / escape / string으로 갈라진다', () {
       const source = r"const a = 'a\nb';";
       expectPartitions(source);
@@ -44,6 +44,15 @@ void main() {
       expectPartitions(source);
       expect(textsOf(source, DartTokenKind.escape), [r'\n', r'\t']);
       expect(textsOf(source, DartTokenKind.string), ["'", 'a', "b'"]);
+    });
+
+    test('보간 안의 원시 문자열에서도 escape가 나오지 않는다', () {
+      // 보간 스캐너는 따옴표만 보고 문자열 스캐너에 넘긴다. `r` 접두사를 같이
+      // 보지 않으면 보간 안의 원시 문자열이 escape를 처리하는 문자열로 스캔되어
+      // 경계가 어긋나고, escape kind까지 잘못 붙는다.
+      const source = "var a = '\${r'x\\n'}';";
+      expectPartitions(source, expectClassified: false);
+      expect(textsOf(source, DartTokenKind.escape), isEmpty);
     });
 
     test('원시 문자열에서는 escape가 나오지 않는다', () {
@@ -102,8 +111,10 @@ void main() {
     });
 
     test('생성자 호출도 어휘적으로는 같은 것이다', () {
-      // 대문자로 시작한다고 타입으로 부르지 않는다. 그것이 ADR-0001이 거부한
-      // 추측이고, 조사한 테마 9/9가 생성자를 함수와 같은 색으로 칠한다.
+      // 대문자로 시작한다고 타입으로 부르지 않는다. ADR-0001이 `type` vs
+      // `variable`을 거부한 근거가 그것이다 — 공식 Dart 문법이 그 구분을
+      // `[_$]*[A-Z]...`라는 관습 기반 추측으로 정한다. 여기서 `Foo`가
+      // `function`인 것은 대문자와 무관하게 여는 괄호가 바로 앞이기 때문이다.
       const source = 'Foo(1)';
       expectPartitions(source);
       expect(textsOf(source, DartTokenKind.function), ['Foo']);

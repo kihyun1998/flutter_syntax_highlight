@@ -95,6 +95,10 @@ void main() {
       "보간 안 문자열의 중괄호": r"${map['{']}",
       "닫히지 않은 문자열": "final a = 'oops",
       "닫히지 않은 보간": r"'${oops",
+      // ADR-0001이 여덟 번째·일곱 번째로 더한 kind들. corpus가 이것들을 담고
+      // 있어야 이후의 partition 작업이 두 kind를 지나간다.
+      "escape 시퀀스": r"'a\nb\tc'",
+      "호출 이름": '.trim()',
     };
 
     constructs.forEach((name, needle) {
