@@ -20,10 +20,35 @@ import 'syntax_palette.dart';
 /// 지배한다: 끄면 세로로 shrink-wrap해 글 안의 코드 블록처럼 쓸 수 있고, 켜면
 /// 자기 영역 안에서 스크롤한다.
 ///
-/// [ScrollController]도 어느 쪽이든 이 위젯이 이름 붙여 소유한다. [SelectableText]가
-/// [EditableText]를 통해 자기 세로 [Scrollable]을 가져오므로, `primary`가 켜지면
-/// 두 스크롤 뷰가 같은 [PrimaryScrollController]를 주장해 framework가 assert한다.
-/// 소비자가 밖에서 감싸다 밟기 쉬운 지뢰이므로 여기서 막는다.
+/// [ScrollController]도 어느 쪽이든 이 위젯이 이름 붙여 소유한다. **이유는
+/// [Scrollbar]가 추적할 대상을 분명히 갖게 하기 위해서다** — 이름 없는 컨트롤러로는
+/// 어느 [Scrollable]을 그리는지가 모호해진다.
+///
+/// 참조 구현은 여기에 다른 이유도 적어 두었다: `primary`가 켜지면 두 스크롤 뷰가
+/// 같은 [PrimaryScrollController]를 주장해 framework가 assert한다는 것. **재보니
+/// 그렇지 않다.** [PrimaryScrollController] 아래에서 `primary: true`로 감싸도
+/// 예외가 나지 않고 `positions.length`는 1이다 — [SelectableText]는 자기
+/// [EditableText]에 컨트롤러를 넘기지 않고, 그 [Scrollable]은 primary를 애초에
+/// 주장하지 않는다. 2026-09-06 측정.
+///
+/// ## 가로는 끌어서 넘길 수 없다. 선택 가능한 것의 대가다
+///
+/// 텍스트 위에서 가로로 드래그하면 스크롤되지 않는다. 세로는 된다. 측정
+/// (2026-09-06, 300×300 뷰포트, 뷰포트 중심에서 120px 드래그):
+///
+/// ```
+/// SelectableText        세로 100.0   가로 0.0
+/// SelectionArea + Text  세로 100.0   가로 0.0
+/// Text (선택 불가)       세로 100.0   가로 100.0
+/// ```
+///
+/// **선택 제스처가 가로 드래그를 가져간다.** [SelectionArea]로 바꿔도 같으므로
+/// [SelectableText]의 문제가 아니라 선택 그 자체의 대가다. 선택을 포기하지 않는 한
+/// 고칠 수 없다.
+///
+/// 그래서 가로 [Scrollbar]는 장식이 아니라 **터치에서 유일한 가로 어포던스**다.
+/// 데스크톱에서는 트랙패드와 휠도 쓸 수 있다. 이 위젯에서 스크롤바를 걷어내려는
+/// 사람은 이 문단을 먼저 읽어야 한다.
 ///
 /// ## 글꼴은 `TextStyle` 하나가 아니라 숫자 몇 개로 받는다
 ///
@@ -34,6 +59,18 @@ import 'syntax_palette.dart';
 ///
 /// [fontFamily]가 null이어도 **반드시 non-null family가 지목된다.** null을
 /// "설정하지 않음"으로 해석하면 위의 상속이 되돌아온다.
+///
+/// 루트 스타일의 색은 `ColorScheme.onSurface`다. 팔레트가 [DartTokenKind.plain]에
+/// 스타일을 주지 않으면 평범한 코드는 그 색으로 그려진다 — 파생 기본값이 실제로
+/// 그렇고, 색이 있는 팔레트를 넘기면서 `plain`을 비워 두면 앱 테마의 색이 남는다.
+///
+/// ## 줄 번호는 없다
+///
+/// 이 위젯은 붙여넣을 수 있는 조각을 보이는 것이지 소스 뷰어가 아니다. 그리고 그
+/// 기능의 자연스러운 구현이 곧 망가진 구현이다 — 인라인 gutter를 placeholder
+/// 스팬으로 만들면 [SelectableText]가 `includePlaceholders`를 기본값으로 두므로
+/// **복사되는 모든 줄에 `\u{FFFC}`가 들어간다.** 자식이 [TextSpan]이어야 한다는
+/// 것은 문서에만 적혀 있고 assert되지 않는다. 그 가드가 테스트에 있다.
 class SyntaxText extends StatefulWidget {
   const SyntaxText(
     this.source, {
@@ -46,6 +83,8 @@ class SyntaxText extends StatefulWidget {
     this.fontSize = 12.5,
     this.height = 1.45,
     this.padding = const EdgeInsets.all(16),
+    this.copyTooltip = 'Copy',
+    this.copiedTooltip = 'Copied',
   });
 
   /// 그릴 Dart 소스.
@@ -55,7 +94,21 @@ class SyntaxText extends StatefulWidget {
   final SyntaxPalette? palette;
 
   /// 코드 영역 우상단의 복사 오버레이.
+  ///
+  /// **이 버튼의 정당화 두 개가 참조 구현에서 이미 철회됐다.** "발견 가능성"과
+  /// "터치 플랫폼 보완"이었는데, 같은 측정이 둘 다 틀렸음을 보였다 —
+  /// `AdaptiveTextSelectionToolbar`가 Android에서 이미 복사를 제공한다. 되돌아오지
+  /// 않게 여기 적어 둔다.
+  ///
+  /// 그럼에도 남긴 이유는 편의다. 검증 장치가 아니다 — 붙여넣기 보장을 지키는 것은
+  /// 렌더된 트리가 원본 바이트로 평탄화되는지를 보는 검사이지 클립보드가 아니다.
   final bool copyable;
+
+  /// 복사 버튼의 툴팁. 기본값이 영문이므로 앱의 언어에 맞춰 넘긴다.
+  final String copyTooltip;
+
+  /// 복사 직후의 툴팁.
+  final String copiedTooltip;
 
   /// **세로 스크롤만** 지배한다. 가로는 언제나 이 위젯이 소유한다.
   final bool scrollable;
@@ -120,7 +173,7 @@ class _SyntaxTextState extends State<SyntaxText> {
   /// 토크나이즈해도 그려지는 것이 똑같기 때문이다 — 관측 가능한 차이가 없으므로
   /// 실패할 수 있는 검사를 쓸 수 없다. 스캔 횟수를 세려면 토크나이저를 주입
   /// 가능하게 만들어야 하는데, 그 이음매의 비용이 이 캐시가 아끼는 것보다 크다.
-  /// 2026-09-06 측정으로 이 저장소에서 가장 큰 파일이 3089 토큰이다.
+  /// 2026-09-06 측정으로 이 저장소에서 가장 큰 파일이 3101 토큰이다.
   late List<DartToken> _tokens;
 
   final _vertical = ScrollController();
@@ -223,7 +276,7 @@ class _SyntaxTextState extends State<SyntaxText> {
           top: 4,
           right: 4,
           child: IconButton(
-            tooltip: _copied ? 'Copied' : 'Copy',
+            tooltip: _copied ? widget.copiedTooltip : widget.copyTooltip,
             iconSize: 17,
             visualDensity: VisualDensity.compact,
             onPressed: _copy,

@@ -5,7 +5,7 @@ import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 여덟 kind가 전부 나오는 조각. 가드가 닿지 않는 분기는 지키지 못하므로,
-/// 아래 검사들이 `_styleFor`의 모든 갈래를 지나가게 한다.
+/// 아래 검사들이 `SyntaxPalette.styleFor`의 모든 갈래를 지나가게 한다.
 const everyKind = "// a comment\n"
     "class Sentinel {\n"
     "  final s = 'a\\nb';\n"
@@ -248,7 +248,160 @@ void main() {
     });
   });
 
+  group('source가 바뀌면 다시 토크나이즈한다', () {
+    testWidgets('새 소스가 그려진다', (tester) async {
+      // 이 검사가 없으면 `didUpdateWidget`의 재토크나이즈를 통째로 지워도
+      // 전 스위트가 초록이다 — 소스가 바뀌었는데 옛 코드가 그려지는 상태다.
+      await pump(tester, const SyntaxText('const first = 1;'));
+      String drawn() => tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .textSpan!
+          .toPlainText(includeSemanticsLabels: false);
+      expect(drawn(), 'const first = 1;');
+
+      await pump(tester, const SyntaxText('const second = 2;'));
+      expect(drawn(), 'const second = 2;');
+    });
+
+    testWidgets('그리고 새 소스의 kind로 칠해진다', (tester) async {
+      // 텍스트만 바뀌고 토큰이 옛것으로 남는 경우를 가른다.
+      await pump(tester, const SyntaxText('plain_identifier'));
+      expect(leavesOf(tester).map((s) => s.text), ['plain_identifier']);
+
+      await pump(tester, const SyntaxText('class X {}'));
+      final texts = leavesOf(tester).map((s) => s.text).toList();
+      expect(texts.first, 'class');
+    });
+  });
+
+  group('소비자가 넘긴 값이 실제로 쓰인다', () {
+    testWidgets('글꼴 크기와 줄 높이', (tester) async {
+      await pump(
+        tester,
+        const SyntaxText(everyKind, fontSize: 33, height: 2.5),
+      );
+      final style =
+          tester.widget<EditableText>(find.byType(EditableText)).style;
+      expect(style.fontSize, 33);
+      expect(style.height, 2.5);
+    });
+
+    testWidgets('글꼴 이름과 fallback', (tester) async {
+      await pump(
+        tester,
+        const SyntaxText(
+          everyKind,
+          fontFamily: 'GivenMono',
+          fontFamilyFallback: ['AlsoGiven'],
+        ),
+      );
+      final style =
+          tester.widget<EditableText>(find.byType(EditableText)).style;
+      expect(style.fontFamily, 'GivenMono');
+      expect(style.fontFamilyFallback, ['AlsoGiven']);
+    });
+
+    testWidgets('여백', (tester) async {
+      await pump(
+        tester,
+        const SyntaxText(everyKind, padding: EdgeInsets.all(40)),
+      );
+      final padding = tester.widgetList<Padding>(find.byType(Padding));
+      expect(
+        padding.map((p) => p.padding),
+        contains(const EdgeInsets.all(40)),
+      );
+    });
+
+    testWidgets('툴팁 문구', (tester) async {
+      // 패키지가 사용자에게 보이는 문자열을 박아 넣으면 앱의 언어를 못 따른다.
+      await pump(tester, const SyntaxText(everyKind, copyTooltip: '복사'));
+      expect(tester.widget<IconButton>(find.byType(IconButton)).tooltip, '복사');
+    });
+  });
+
+  group('스크롤이 실제로 움직인다', () {
+    // **자식의 중심이 아니라 뷰포트 중심에서 끈다.** 긴 소스의 `SelectableText`는
+    // 뷰포트보다 크므로 그 중심은 화면 밖이고, 거기서 끄는 제스처는 허공에
+    // 떨어져 아무것도 움직이지 않는다 — 스크롤이 고장 난 것처럼 보인다.
+    final long = List.generate(
+      80,
+      (i) =>
+          "final variable\$i = 'a rather long string literal number \$i here';",
+    ).join('\n');
+
+    testWidgets('세로는 끌어서 넘어간다', (tester) async {
+      await pump(tester, SyntaxText(long));
+      final vertical = tester.widget<SingleChildScrollView>(
+        find.byWidgetPredicate((w) =>
+            w is SingleChildScrollView && w.scrollDirection == Axis.vertical),
+      );
+      expect(vertical.controller!.position.maxScrollExtent, greaterThan(0));
+
+      await tester.dragFrom(
+        tester.getCenter(find.byType(SyntaxText)),
+        const Offset(0, -120),
+      );
+      await tester.pumpAndSettle();
+      expect(vertical.controller!.position.pixels, greaterThan(0));
+    });
+
+    testWidgets('가로는 끌어서 넘어가지 않는다 — 선택 가능한 것의 대가', (tester) async {
+      // 고장이 아니라 성질이다. 선택 제스처가 가로 드래그를 가져가고,
+      // `SelectionArea`로 바꿔도 같다(2026-09-06 측정). 선택을 포기하지 않는 한
+      // 고칠 수 없으므로, 가로 `Scrollbar`가 터치에서 유일한 어포던스다.
+      //
+      // 이 검사가 있는 이유는 그 사실이 잊히면 누군가 스크롤바를 "장식"이라며
+      // 걷어내기 때문이다.
+      await pump(tester, SyntaxText(long));
+      final horizontal = tester.widget<SingleChildScrollView>(
+        find.byWidgetPredicate((w) =>
+            w is SingleChildScrollView && w.scrollDirection == Axis.horizontal),
+      );
+      expect(horizontal.controller!.position.maxScrollExtent, greaterThan(0),
+          reason: '줄이 접혔다 — 접힌 줄은 다른 줄이다');
+
+      await tester.dragFrom(
+        tester.getCenter(find.byType(SyntaxText)),
+        const Offset(-120, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(horizontal.controller!.position.pixels, 0);
+
+      // 그리고 **가로** 스크롤바가 실제로 거기 있다. `findsWidgets`로는 부족하다 —
+      // 세로 것 하나만 남아도 통과해 버린다.
+      final bars = tester.widgetList<Scrollbar>(find.byType(Scrollbar));
+      expect(
+        bars.map((b) => b.controller),
+        contains(horizontal.controller),
+        reason: '가로 스크롤바가 없다 — 터치에서 가로로 넘길 방법이 사라졌다',
+      );
+    });
+
+    testWidgets('컨트롤러는 트리와 함께 정리된다', (tester) async {
+      await pump(tester, SyntaxText(long));
+      final controller = tester
+          .widget<SingleChildScrollView>(
+            find.byWidgetPredicate((w) =>
+                w is SingleChildScrollView &&
+                w.scrollDirection == Axis.vertical),
+          )
+          .controller!;
+      await pump(tester, const SizedBox());
+      expect(() => controller.addListener(() {}), throwsFlutterError);
+    });
+  });
+
   group('복사 컨트롤', () {
+    testWidgets('오른쪽 위에 놓인다', (tester) async {
+      // 왼쪽에 두면 코드의 첫 글자들을 가린다.
+      await pump(tester, const SyntaxText(everyKind));
+      final widget = tester.getRect(find.byType(SyntaxText));
+      final button = tester.getCenter(find.byType(IconButton));
+      expect(button.dx, greaterThan(widget.center.dx));
+      expect(button.dy, lessThan(widget.center.dy));
+    });
+
     testWidgets('copyable: false면 없다', (tester) async {
       await pump(tester, const SyntaxText(everyKind, copyable: false));
       expect(find.byType(IconButton), findsNothing);
