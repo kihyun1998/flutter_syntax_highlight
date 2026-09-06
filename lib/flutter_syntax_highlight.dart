@@ -13,3 +13,4 @@ library;
 
 export 'src/tokenizer/dart_tokenizer.dart';
 export 'src/widget/syntax_palette.dart';
+export 'src/widget/syntax_text.dart';
