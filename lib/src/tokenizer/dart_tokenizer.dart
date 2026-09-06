@@ -60,7 +60,7 @@
 ///
 /// 따옴표를 단순히 짝지으면 세 번째가 문자열 / `✓`는 코드 / ` : `는 문자열 /
 /// `✗`는 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이 보여주려는 바로 그
-/// 두 글자에서. 그래서 [_stringEnd]와 [_interpolationEnd]는 **상호 재귀**다:
+/// 두 글자에서. 그래서 [_scanStringLiteral]과 [_interpolationEnd]는 **상호 재귀**다:
 /// 보간은 중첩 문자열을 이해하는 중괄호 카운터로 스캔된다.
 ///
 /// **그리고 보간 안은 바깥과 같은 규칙으로 다시 훑는다.** 그래서 위 세 번째
@@ -132,6 +132,8 @@ class DartToken {
   String toString() => 'DartToken(${kind.name}, ${text.length} chars)';
 }
 
+typedef _Emit = void Function(DartTokenKind kind, int end);
+
 /// [source]를 kind가 붙은 구간들의 **partition**으로 쪼갠다.
 ///
 /// 같은 kind의 인접한 구간은 하나로 합쳐지며, 이는 미관 문제가 아니다: 위젯 층은
@@ -139,8 +141,12 @@ class DartToken {
 /// 않다고 비교될 때마다 컨트롤러를 다시 만들며, `TextSpan`의 동등성은 깊은
 /// 순회다. 괄호마다 스팬을 내보내면 눈에 보이는 이득 없이 리빌드마다 수천 번의
 /// `TextStyle` 비교를 얹게 된다.
-typedef _Emit = void Function(DartTokenKind kind, int end);
-
+///
+/// 2026-09-06 측정: 이 저장소가 가진 파일 중 가장 큰 것이 **3089** 토큰이다
+/// (`dart_tokenizer.dart` 자신). 참조 구현이 2026-09-02에 잰 값은 1436이었고,
+/// 그것은 kind가 6개이며 문자열을 쪼개지 않던 때의 숫자다 — `escape`가 생기고
+/// 보간 안이 재귀적으로 토큰화되면서 두 배가 되었다. 합치기가 그만큼 더 세게
+/// 걸린다.
 List<DartToken> tokenizeDart(String source) {
   // 진행하면서 토큰 목록을 만드는 대신 두 개의 평행 리스트를 쓴다: 스캐너는
   // 끝 오프셋을 덧붙이기만 하므로, "토큰이 소스를 빈틈없이 덮는다"가 분기마다
@@ -151,6 +157,20 @@ List<DartToken> tokenizeDart(String source) {
   final kinds = <DartTokenKind>[];
   final ends = <int>[];
   void emit(DartTokenKind kind, int end) {
+    // **끝은 단조 증가한다.** 이것이 partition의 마지막 방벽이다 — 어느 분기가
+    // 무엇을 잘못 계산해도 토큰들은 소스를 겹치지 않게 덮고, `substring`이
+    // 던지지 않는다.
+    //
+    // 2026-09-06 기준 이 가드는 **한 번도 도달하지 않는다.** 주석 원자를 넣은
+    // 알파벳으로 20만 입력을 퍼징해 0회였다. 그럼에도 두는 이유는, 도달한다는
+    // 것이 곧 스캐너에 버그가 있다는 뜻이고 그때의 선택지가 "조금 틀린 색"과
+    // "소비자 앱에서의 예외" 둘뿐이기 때문이다. `assert`가 개발 중에는 그것을
+    // 시끄럽게 만들고, 배포에서는 아래 한 줄이 조용히 받는다.
+    assert(
+      ends.isEmpty || end > ends.last,
+      '토큰의 끝이 뒤로 갔다 — 어느 스캐너가 경계를 잘못 계산했다',
+    );
+    if (ends.isNotEmpty && end <= ends.last) return;
     kinds.add(kind);
     ends.add(end);
   }
@@ -174,10 +194,14 @@ List<DartToken> tokenizeDart(String source) {
 /// 하고, 그것이 이 패키지의 요점이다 — `'\${a ? 'x' : 'y'}'`에서 안쪽 `'x'`가
 /// 문자열로 그려진다. 따옴표 쌍을 맞추는 스캐너는 정확히 그 반대로 칠한다.
 ///
-/// 내보내는 끝 오프셋을 [to]로 자른다. 경계를 정한 [_interpolationEnd]와 여기의
-/// 하위 스캔이 어긋날 수 있는 자리가 하나 있기 때문이다 — 보간 안의 `//`는
-/// 유효한 Dart가 아니지만, 들어오면 줄 주석 스캐너가 닫는 중괄호를 지나쳐 버린다.
-/// 자르면 토큰들이 이 구간을 정확히 덮고, partition이 어느 쪽이든 성립한다.
+/// 경계를 정한 [_interpolationEnd]와 여기의 하위 스캔은 같은 하위 스캐너들을
+/// 쓴다 — 문자열도, 주석도. 그래서 어긋나지 않는다.
+///
+/// 한 번은 어긋났었다. [_interpolationEnd]가 주석을 몰라 `'\${a /* } */ + 1}'`의
+/// 닫는 중괄호를 주석 **안에서** 찾았고, 그것은 유효한 Dart였다. 그때의 대응은
+/// 여기서 끝 오프셋을 잘라내는 것이었는데, 자른 끝이 앞선 끝보다 뒤로 가면서
+/// `substring`이 던졌다 — 잘못된 색보다 나쁜 실패다. 자르는 대신 어긋남 자체를
+/// 없앴고, 남은 방벽은 `tokenizeDart`의 `emit` 한 곳뿐이다.
 void _scanRange(String source, int from, int to, _Emit emit) {
   var i = from;
   while (i < to) {
@@ -200,7 +224,7 @@ void _scanRange(String source, int from, int to, _Emit emit) {
       // 문자열은 토큰 하나로 끝나지 않는다. escape가 잘려 나가고 보간이 그
       // 안에서 재귀적으로 스캔되므로, 이 분기는 아래의 `emit` 한 번을 쓰지
       // 못하고 직접 내보낸다.
-      i = _scanStringLiteral(source, i, i, raw: false, emit: emit, to: to);
+      i = _scanStringLiteral(source, i, i, raw: false, emit: emit);
       continue;
     } else if (_isIdentifierStart(c)) {
       final end = _identifierEnd(source, i);
@@ -215,7 +239,7 @@ void _scanRange(String source, int from, int to, _Emit emit) {
         // 막으므로 결과는 토큰 하나로 같지만, 특례를 없애야 "원시 문자열에서는
         // escape가 나오지 않는다"는 검사가 경로 구조 때문이 아니라 `raw` 판정
         // 때문에 통과하게 된다.
-        i = _scanStringLiteral(source, i, end, raw: true, emit: emit, to: to);
+        i = _scanStringLiteral(source, i, end, raw: true, emit: emit);
         continue;
       } else {
         // 키워드를 **먼저** 본다. 이 순서가 뒤집히면 `if(x)`의 `if`가 함수
@@ -247,7 +271,6 @@ void _scanRange(String source, int from, int to, _Emit emit) {
       i++;
     }
 
-    if (i > to) i = to;
     emit(kind, i);
   }
 }
@@ -317,7 +340,6 @@ int _scanStringLiteral(
   int quoteAt, {
   required bool raw,
   _Emit? emit,
-  int? to,
 }) {
   final quote = source.codeUnitAt(quoteAt);
   final triple = quoteAt + 2 < source.length &&
@@ -382,7 +404,6 @@ int _scanStringLiteral(
     j++;
   }
 
-  if (to != null && j > to) j = to;
   flush(j);
   return j;
 }
@@ -406,6 +427,20 @@ int _scanStringLiteral(
   var depth = 1;
   while (j < source.length) {
     final c = source.codeUnitAt(j);
+    // 주석을 건너뛴다. 문자열과 **같은 이유**다 — 주석 안의 중괄호는 중괄호가
+    // 아니다. 이것이 없으면 `'\${a /* } */ + 1}'`에서 주석 안의 `}`가 보간을
+    // 끝내고, 그 뒤가 전부 어긋난다. 유효한 Dart이고 실제로 실행되는 코드다.
+    if (c == _slash && j + 1 < source.length) {
+      final next = source.codeUnitAt(j + 1);
+      if (next == _slash) {
+        j = _lineCommentEnd(source, j);
+        continue;
+      }
+      if (next == _star) {
+        j = _blockCommentEnd(source, j);
+        continue;
+      }
+    }
     if (c == _singleQuote || c == _doubleQuote) {
       // `r` 접두사를 여기서도 본다. 바깥 루프와 같은 규칙이다 — 식별자가 이어질
       // 수 없었던 자리의 `r`만 접두사다. 이것을 보지 않으면 보간 안의 원시

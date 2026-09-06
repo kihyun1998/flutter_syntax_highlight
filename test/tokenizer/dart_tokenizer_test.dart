@@ -279,32 +279,88 @@ void main() {
     });
   });
 
-  group('경계를 정한 스캐너와 다시 훑는 스캐너가 어긋나는 자리', () {
+  group('보간 안의 주석 — 두 스캐너가 어긋났던 자리', () {
     // 보간의 끝은 중괄호를 세는 스캐너가 정하고, 그 안은 바깥과 같은 디스패치가
-    // 다시 훑는다. 둘은 문자열에 대해서는 같은 함수를 쓰므로 어긋날 수 없지만
-    // **주석에 대해서는 다르다** — 중괄호 세는 쪽은 `//`를 모른다.
+    // 다시 훑는다. 둘이 어긋나면 경계가 틀린다.
     //
-    // 보간 안의 주석은 유효한 Dart가 아니다. 그래도 들어오면 partition이
-    // 깨져서는 안 된다. 소비자의 코드는 얌전할 의무가 없고, 이 패키지가 파는
-    // 것이 바로 그 보장이다.
-    test('보간 안의 줄 주석이 닫는 중괄호를 삼켜도 partition은 성립한다', () {
+    // 실제로 어긋났었다. 중괄호 세는 쪽이 주석을 몰라서 주석 **안의** 중괄호를
+    // 보간의 끝으로 삼았고, 그 결과 아래 첫 입력에서 주석이 반토막 나고 나머지가
+    // 문자열이 되었다. 그리고 이것들은 전부 **유효한 Dart이고 실제로 실행된다** —
+    // 망가진 입력을 방어하는 이야기가 아니다.
+    test('블록 주석 안의 중괄호는 보간을 끝내지 않는다', () {
+      const source = "'\${a /* } */ + 1}'";
+      expectPartitions(source);
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        'plain|a ',
+        'comment|/* } */', // 반토막 나면 여기가 `/* ` 가 된다
+        'plain| ',
+        'punctuation|+',
+        'plain| ',
+        'number|1',
+        'punctuation|}',
+        "string|'",
+      ]);
+    });
+
+    test('삼중 따옴표 안에서 줄 주석이 여러 줄에 걸쳐도', () {
+      const source = "'''\${a // c\n}'''";
+      expectPartitions(source);
+      expect(streamOf(source), [
+        "string|'''",
+        'punctuation|\${',
+        'plain|a ',
+        'comment|// c',
+        'plain|\n',
+        'punctuation|}',
+        "string|'''",
+      ]);
+    });
+
+    test('주석 안의 따옴표가 문자열을 열지 않는다 — 한때 던지던 입력', () {
+      // 퍼징이 찾아낸 최소 재현. 고치기 전에는 `RangeError`로 죽었다 —
+      // 잘린 끝이 앞선 끝보다 뒤로 가서 `substring`이 던졌다. 라이브러리가 파는
+      // 유일한 보장이 예외로 깨지는 것은 partition이 깨지는 것보다 나쁘다.
+      const source = "'\${/*'*/'}\\n'}'";
+      expectPartitions(source);
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        "comment|/*'*/",
+        "string|'}",
+        'escape|\\n',
+        "string|'",
+        'punctuation|}',
+        "string|'",
+      ]);
+    });
+
+    test('닫히지 않은 줄 주석은 보간과 문자열을 함께 끝낸다', () {
+      // `'\${a // b}'`에는 개행이 없으므로 주석이 입력 끝까지 간다. 유효한
+      // Dart가 아니고, 피해가 그 줄에 갇히는 것이 맞다.
       const source = "'\${a // b}'";
       expectPartitions(source, expectClassified: false);
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        'plain|a ',
+        "comment|// b}'",
+      ]);
     });
 
-    test('여러 줄에 걸쳐도', () {
-      const source = "'\${a // b\nc}'";
+    test('보간 안의 원시 문자열은 경계를 다르게 정한다', () {
+      // 중괄호 세는 쪽도 `r` 접두사를 봐야 한다. 보지 않으면 `\'`를 escape로
+      // 읽어 닫는 따옴표를 지나치고, 보간의 끝을 엉뚱한 곳에서 찾는다.
+      const source = "'\${r'a\\'}'";
       expectPartitions(source);
-    });
-
-    test('삼중 따옴표 안에서도', () {
-      const source = "'''\${a // b}'''";
-      expectPartitions(source, expectClassified: false);
-    });
-
-    test('블록 주석이 닫는 중괄호를 품어도', () {
-      const source = "'\${/* x }*/ y}'";
-      expectPartitions(source);
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        "string|r'a\\'",
+        'punctuation|}',
+        "string|'",
+      ]);
     });
   });
 
