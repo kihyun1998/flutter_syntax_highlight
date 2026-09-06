@@ -66,6 +66,7 @@ class _ExampleAppState extends State<ExampleApp> {
 
   @override
   Widget build(BuildContext context) {
+    final isLight = _brightness == Brightness.light;
     return MaterialApp(
       title: 'flutter_syntax_highlight',
       debugShowCheckedModeBanner: false,
@@ -83,16 +84,13 @@ class _ExampleAppState extends State<ExampleApp> {
             // 장치이고, 실명 프리셋이 반대 밝기에서 보이지 않게 되는 것도 같이
             // 보인다.
             IconButton(
-              tooltip: _brightness == Brightness.light ? '다크로' : '라이트로',
+              tooltip: isLight ? '다크로' : '라이트로',
               icon: Icon(
-                _brightness == Brightness.light
-                    ? Icons.dark_mode_outlined
-                    : Icons.light_mode_outlined,
+                isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
               ),
               onPressed: () => setState(
-                () => _brightness = _brightness == Brightness.light
-                    ? Brightness.dark
-                    : Brightness.light,
+                () =>
+                    _brightness = isLight ? Brightness.dark : Brightness.light,
               ),
             ),
             const SizedBox(width: 8),
