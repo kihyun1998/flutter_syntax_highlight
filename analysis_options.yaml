@@ -7,6 +7,9 @@ analyzer:
     # 분석에서도 제외한다 — reference/README.md 참조.
     - reference/**
     - build/**
+
+    # 아래 여섯 줄은 이 패키지에 존재하지 않는 디렉터리를 가리킨다. 지워도
+    # `flutter pub get`이 그때마다 다시 넣는다(측정함). 도구가 임자이므로 둔다.
     - android/**
     - ios/**
     - web/**

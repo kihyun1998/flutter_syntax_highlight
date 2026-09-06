@@ -1,7 +1,7 @@
 name: flutter_syntax_highlight
 description: >-
   Dart-only syntax highlighting in two layers: a pure-Dart tokenizer underneath
-  and a thin widget on top. What is drawn is byte-for-byte what you copy.
+  and a thin widget on top. The tokens rejoin into the exact input, byte for byte.
 version: 0.1.0
 homepage: https://github.com/kihyun1998/flutter_syntax_highlight
 repository: https://github.com/kihyun1998/flutter_syntax_highlight
@@ -25,6 +25,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  # ^6.0.0은 `sdk: ^3.8.0`을 요구하므로 위에 선언한 하한 3.6.0을 거짓으로
+  # 만든다. ^5.0.0은 ^3.5.0을 요구해 하한과 맞고, 참조 repo가 쓰는 것과도 같다.
+  flutter_lints: ^5.0.0
 
 flutter:

@@ -1,14 +1,29 @@
 # `.pubignore`는 `.gitignore`를 보완하지 않고 **대체한다.** 여기 적히지 않은 것은
 # git이 무시하든 말든 배포 아카이브에 들어간다 — 이 파일을 처음 만들었을 때
 # 실제로 `build/` 아래 45MB짜리 캐시가 아카이브에 실렸다.
+#
+# 그래서 `.gitignore`가 막던 것 중 **실제로 생길 수 있는 것**을 전부 옮겨 온다.
+# `pubspec.lock`과 `.DS_Store`는 pub이 자체적으로 배제하므로 뺐다.
 
-# 빌드 산출물
+# 빌드 산출물과 도구 캐시
 build/
 .dart_tool/
+.flutter-plugins-dependencies
 
-# 도구·IDE 파일
+# 게이트와 문서 생성이 만드는 것. `flutter test --coverage`나 `dart doc`
+# 한 번이면 생기고, 그러면 배포물에 실린다.
+coverage/
+**/doc/api/
+*.log
+
+# IDE·에디터 파일
 .idea/
+.atom/
+.history
 *.iml
+*.ipr
+*.iws
+*.swp
 .metadata
 
 # 참조 구현 스냅샷. 패키지의 일부가 아니라, 구현이 자기 결과물을 대조하기 위한
