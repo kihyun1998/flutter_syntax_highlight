@@ -1,0 +1,17 @@
+const plain = 'a plain string';
+const escapedQuote = 'it\'s escaped';
+const escapedDouble = "she said \"hi\"";
+const raw = r'a\ backslash that is not an escape';
+const rawWithQuote = r'a\';
+const slashesInside = 'https://example.com/path // not a comment';
+const blockInside = 'this /* is not */ a comment';
+const tripleQuoted = '''
+a triple quoted string
+  that spans lines and holds 'quotes'
+''';
+const tripleDouble = """
+and the double-quoted kind
+""";
+const empty = '';
+const adjacent = 'one' 'two';
+const withNewlineEscape = 'a\nb\tc';

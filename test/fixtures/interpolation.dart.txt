@@ -1,0 +1,9 @@
+final a = '${newValue ?? ''}'.trim();
+final b = 'selectedRows: ${selected.join(', ')}';
+final c = '${term.value ? '✓' : '✗'} ${term.key}';
+final d = '${map['{']}';
+final e = '$simple and ${nested.call()} together';
+final f = "double ${'single inside'} quoted";
+final g = '''
+triple with ${interpolation} inside
+''';

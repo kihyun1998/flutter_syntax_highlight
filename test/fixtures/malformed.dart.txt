@@ -1,0 +1,5 @@
+final a = 'oops
+final b = 2;
+final c = '${oops
+final d = 3;
+final e = /* never closed

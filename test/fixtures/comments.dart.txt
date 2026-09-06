@@ -1,0 +1,13 @@
+// somebody's name
+// the API's shape, and another's too
+/// A doc comment with 'quotes' in it.
+///
+/// And a second paragraph that says "double" as well.
+const afterComments = 'x';
+
+/* a plain block comment */
+/* outer /* inner */ still outer */
+const afterNested = 1;
+
+// a comment ending the file with no trailing newline
+const last = 2; // trailing comment with an apostrophe: don't
