@@ -39,7 +39,7 @@ One Light       Copyright (c) 2016 GitHub Inc. (MIT)
 
     oneLight        github.com/atom/one-light-syntax
                     @ aaefc249c22a0ce8fb9c45382120ca1578267f28
-                      styles/colors.less, styles/syntax/_base.less
+                      styles/colors.less, styles/language.less
 
 Monokai         Copyright (c) 2015 Colorsublime.com (MIT)
                 via Visual Studio Code,
@@ -79,16 +79,26 @@ Cobalt2         Copyright (c) 2018 Wes Bos, Roberto Achar (MIT)
 
 ---
 
-Themes deliberately not included, and why:
+Themes deliberately not included, and why.
 
-    Dracula         US Reg. 6,306,339 (Zeno Rocha) names "syntax highlighters"
-                    among its goods. MIT conveys no trademark rights.
-    Nord            US Reg. 7,458,940 (NordSec B.V.) covers downloadable
-                    software and software development. Its licence was clean.
+**The trademark registration numbers below have not been verified at
+tsdr.uspto.gov.** They come from trademark-database searches recorded in this
+project's issue tracker; TSDR itself could not be read (the page is JavaScript
+gated and its API requires a key). Read them as the reason a name was set aside
+pending verification, not as findings of fact.
+
+    Dracula         Search reports US Reg. 6,306,339 (Zeno Rocha) naming
+                    "syntax highlighters" among its goods. MIT conveys no
+                    trademark rights.
+    Nord            Search reports US Reg. 7,458,940 (NordSec B.V.) covering
+                    downloadable software and software development. Its licence
+                    was clean; the name is the only reason it is absent.
     GitHub Dark/Light   GITHUB is a live mark and GitHub's brand policy
                     restricts name use separately from the MIT licence.
-    Everforest      US Reg. 7,762,715 and EUIPO 018641989.
+    Everforest      Search reports US Reg. 7,762,715 and EUIPO 018641989.
     Monokai Pro     Proprietary; may not be sub-licensed or redistributed.
+                    This one is a licence term, read directly, not a search.
 
-This is a record of reading each project's LICENSE file and of direct USPTO
-TMSearch and TMview queries. It is not legal advice.
+The licence findings above are a record of reading each project's LICENSE file.
+The trademark lines are a record of database searches, unverified as noted.
+Neither is legal advice.

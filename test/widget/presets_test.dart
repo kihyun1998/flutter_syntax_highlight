@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// 이름 붙은 프리셋 전부. 새로 추가하면 여기 넣어야 아래 검사들이 그것도 본다.
+/// 이름 붙은 프리셋 전부.
+///
+/// **손으로 다시 적은 목록이고, 그것이 요점이다.** 패키지는 이름 룩업을 두지
+/// 않기로 했으므로(레지스트리를 만들지 않는다는 결정) 여기서 돌 목록이 lib에
+/// 없다. 프리셋을 추가하고 이 목록에 넣지 않으면 그 프리셋은 아래 검사들을
+/// 하나도 통과하지 않은 채 배포된다 — 그 위험은 남아 있고, 숨기지 않는다.
 const presets = <String, SyntaxPalette>{
   'solarizedDark': SyntaxPalette.solarizedDark,
   'solarizedLight': SyntaxPalette.solarizedLight,
@@ -21,7 +26,6 @@ const presets = <String, SyntaxPalette>{
 void main() {
   test('열 개다', () {
     expect(presets, hasLength(10));
-    expect(SyntaxPalette.presets.keys, presets.keys);
   });
 
   group('모양', () {
@@ -141,20 +145,23 @@ void main() {
         'Microsoft Corporation',
         'GitHub Inc.',
         'Colorsublime.com',
-        'Pavel Pertsev',
         'Enkia',
         'Wes Bos',
+        'JD', // gruvbox 이식본의 저작권자
       ]) {
         expect(notices, contains(holder), reason: holder);
       }
+      // gruvbox 정본은 저작권 줄이 존재하지 않아 옮겨 적을 것이 없다. 원저자는
+      // 저작권 표기가 아니라 **출처 표기**로 들어간다.
+      expect(notices, contains('Pavel Pertsev'));
     });
 
     test('값을 뜬 파일을 커밋까지 지목한다', () {
       // 같은 테마도 판본마다 라이선스가 다르다. 어느 파일에서 떴는지가 없으면
       // 나중에 그 판정을 다시 할 수 없다.
-      expect(RegExp(r'[0-9a-f]{40}').allMatches(notices).length,
-          greaterThanOrEqualTo(5),
-          reason: '커밋으로 고정된 출처가 모자란다');
+      // 정확한 수를 못 박는다. `>= 5`로 두면 둘이 사라져도 초록이다.
+      expect(RegExp(r'[0-9a-f]{40}').allMatches(notices).length, 7,
+          reason: '커밋으로 고정된 출처가 줄었다');
     });
 
     test('배포물에 실린다', () {
