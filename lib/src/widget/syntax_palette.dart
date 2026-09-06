@@ -28,6 +28,13 @@ import '../tokenizer/dart_tokenizer.dart';
 /// 파생이기 때문에 라이트와 다크 양쪽이 설정 없이 맞는다. 하드코딩된 팔레트는
 /// 반대 밝기에서 조용히 깨진다.
 ///
+/// **대가가 있고, 숨기지 않는다.** 색상을 도입하지 않으면 쓸 수 있는 축이
+/// 밝기·굵기·기울임 셋뿐이고, `ColorScheme`의 역할들이 서로 얼마나 떨어져 있는지는
+/// 우리가 정하지 않는다. 2026-09-06 측정: `ColorScheme.fromSeed(0xFF6750A4)`에서
+/// `onSurface` 대 `onSurfaceVariant`의 대비는 다크 **1.32**, 라이트 **1.83**이다 —
+/// 평범한 코드와 문자열의 차이가 그만큼 옅다. 색이 있는 실명 프리셋에는 이 한계가
+/// 없다.
+///
 /// ## 주석만 흐려지지 않는다
 ///
 /// 보통의 하이라이터는 주석을 흐리고 키워드를 밝힌다. 그것은 **이미 아는 코드를
@@ -74,9 +81,14 @@ class SyntaxPalette {
         keyword: const TextStyle(fontWeight: FontWeight.w600),
         string: TextStyle(color: scheme.onSurfaceVariant),
         number: TextStyle(color: scheme.onSurfaceVariant),
-        // 문자열의 일부이므로 문자열과 같은 자리에 둔다. 조사한 테마 열 중 넷은
-        // escape를 number와 같은 색으로 칠했다 — 고유한 색을 주는 것이 보편적인
-        // 선택은 아니다.
+        // 문자열과 **같게** 그린다. 조사한 테마 9종은 전부 escape에 다른 색을
+        // 주지만, 그것들에는 색상이 있다. 여기 남은 축은 밝기·굵기·기울임 셋뿐이고
+        // 이미 다 쓰였으므로, 줄 수 있는 것이 없다.
+        //
+        // 그래서 escape는 자기 리터럴과 함께 그려진다 — 그것의 일부이기도 하다.
+        // 프리셋 조사(#9)에서 열 중 넷이 escape를 number와 같은 색으로 칠하는
+        // 것을 보면, 항상 구분하는 것이 보편적인 선택도 아니다. 다만 그것은
+        // 근거가 아니라 곁증거다. 근거는 이 팔레트에 남은 축이 없다는 것이다.
         escape: TextStyle(color: scheme.onSurfaceVariant),
         // **`function`은 주지 않는다.** 조사한 테마 9/9가 호출 이름을 다르게
         // 칠하지만 그것들에는 색상이 있다. 여기서 남은 축은 밝기·굵기·기울임
@@ -114,11 +126,40 @@ class SyntaxPalette {
   /// 여는 괄호 바로 앞의 식별자.
   final TextStyle? function;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SyntaxPalette &&
+          plain == other.plain &&
+          comment == other.comment &&
+          keyword == other.keyword &&
+          string == other.string &&
+          number == other.number &&
+          punctuation == other.punctuation &&
+          escape == other.escape &&
+          function == other.function;
+
+  @override
+  int get hashCode => Object.hash(
+        plain,
+        comment,
+        keyword,
+        string,
+        number,
+        punctuation,
+        escape,
+        function,
+      );
+
   /// [kind]를 어떻게 그릴지. null이면 루트 스타일을 그대로 쓴다.
   ///
   /// 전수 `switch`인 것이 의도다. [DartTokenKind]에 값이 더해지면 **이 함수가
-  /// 컴파일되지 않는다.** ADR-0001이 기록한 대로 kind를 더하는 것은 공개 후
-  /// breaking change이고, 그 순간이 조용히 지나가서는 안 된다.
+  /// 컴파일되지 않는다.**
+  ///
+  /// ADR-0001은 그 목록이 *"사실상 영구적"*이라고 적었다 — 소비자의 전수
+  /// `switch`가 깨지므로 공개 후에는 breaking change이고, 그래서 조사가 근거를
+  /// 준 시점에 못 박았다. 여기의 컴파일 에러는 그 문을 다시 여는 허가가 아니라,
+  /// 누가 열려 할 때 소리가 나게 하는 장치다.
   TextStyle? styleFor(DartTokenKind kind) => switch (kind) {
         DartTokenKind.plain => plain,
         DartTokenKind.comment => comment,

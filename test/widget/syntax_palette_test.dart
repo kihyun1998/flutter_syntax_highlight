@@ -101,12 +101,39 @@ void main() {
       );
     });
 
-    test('키워드는 색이 아니라 굵기로 구분된다', () {
-      // 색상을 쓰지 않고 구분하려면 색 말고 다른 축이 필요하다.
+    test('키워드는 색이 아니라 굵기로, 그리고 더 굵게 구분된다', () {
+      // 색상을 쓰지 않고 구분하려면 색 말고 다른 축이 필요하다. 그런데 축을
+      // 쓰는 것만으로는 부족하다 — 굵기를 **낮추면** 키워드가 평범한 코드보다
+      // 흐려진다. 방향까지 못 박지 않으면 그 변형이 통과한다.
       final palette = SyntaxPalette.fromColorScheme(colourful);
       final keyword = palette.styleFor(DartTokenKind.keyword)!;
-      expect(keyword.fontWeight, isNotNull);
       expect(keyword.color, isNull);
+      expect(
+        keyword.fontWeight!.value,
+        greaterThan(FontWeight.normal.value),
+        reason: '키워드가 평범한 코드보다 흐리게 그려진다',
+      );
+    });
+
+    test('리터럴의 내용물 셋은 같은 자리에서 흐려진다', () {
+      // `string` / `number` / `escape`는 같은 역할을 읽는다. 셋 다 리터럴의
+      // 내용물이고, 색상 없이 셋을 더 가를 축이 남아 있지 않다.
+      //
+      // 값을 못 박지 않으면 셋 중 하나만 `outline`으로 옮기는 변형이 통과한다 —
+      // 그러면 문자열 안의 escape가 구두점과 같은 밝기가 되어, 리터럴이 중간에서
+      // 꺼진 것처럼 보인다.
+      final palette = SyntaxPalette.fromColorScheme(colourful);
+      for (final kind in [
+        DartTokenKind.string,
+        DartTokenKind.number,
+        DartTokenKind.escape,
+      ]) {
+        expect(
+          palette.styleFor(kind)!.color,
+          colourful.onSurfaceVariant,
+          reason: '$kind',
+        );
+      }
     });
 
     test('라이트와 다크가 다른 값을 낸다', () {
@@ -124,6 +151,66 @@ void main() {
         light.styleFor(DartTokenKind.string)!.color,
         isNot(dark.styleFor(DartTokenKind.string)!.color),
       );
+    });
+  });
+
+  group('styleFor의 배선', () {
+    // **kind마다 다른 표식을 꽂아 배선 자체를 검사한다.** 이것이 없으면
+    // `escape => number`처럼 두 칸을 맞바꾼 switch가 전부 통과한다 — 파생
+    // 기본값에서 그 둘이 같은 스타일이기 때문이다. 실제로 그 변형 넷이
+    // 살아남았다.
+    //
+    // `fontSize`를 표식으로 쓰는 이유는 팔레트가 그것을 절대 쓰지 않기
+    // 때문이다. 색이나 굵기를 쓰면 표식과 진짜 값이 섞인다.
+    const wired = SyntaxPalette(
+      plain: TextStyle(fontSize: 1),
+      comment: TextStyle(fontSize: 2),
+      keyword: TextStyle(fontSize: 3),
+      string: TextStyle(fontSize: 4),
+      number: TextStyle(fontSize: 5),
+      punctuation: TextStyle(fontSize: 6),
+      escape: TextStyle(fontSize: 7),
+      function: TextStyle(fontSize: 8),
+    );
+    const expected = <DartTokenKind, double>{
+      DartTokenKind.plain: 1,
+      DartTokenKind.comment: 2,
+      DartTokenKind.keyword: 3,
+      DartTokenKind.string: 4,
+      DartTokenKind.number: 5,
+      DartTokenKind.punctuation: 6,
+      DartTokenKind.escape: 7,
+      DartTokenKind.function: 8,
+    };
+
+    test('여덟 kind가 각자 자기 칸으로 간다', () {
+      // 표식이 kind 수만큼 있어야 한다 — 하나라도 빠지면 그 배선은 검사되지 않는다.
+      expect(expected.keys.toSet(), DartTokenKind.values.toSet());
+      for (final entry in expected.entries) {
+        expect(
+          wired.styleFor(entry.key)?.fontSize,
+          entry.value,
+          reason: '${entry.key}의 배선이 어긋났다',
+        );
+      }
+    });
+  });
+
+  group('값 동등성', () {
+    // `SyntaxText`가 팔레트를 파라미터로 받으면 `didUpdateWidget`이 이것으로
+    // 재계산 여부를 정한다. 없으면 같은 스킴에서 파생한 두 팔레트가 서로 다르게
+    // 보여 리빌드마다 토큰을 다시 칠하게 된다.
+    test('같은 값이면 같다', () {
+      final a = SyntaxPalette.fromColorScheme(colourful);
+      final b = SyntaxPalette.fromColorScheme(colourful);
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('한 칸만 달라도 다르다', () {
+      const a = SyntaxPalette(comment: TextStyle(fontSize: 1));
+      const b = SyntaxPalette(comment: TextStyle(fontSize: 2));
+      expect(a, isNot(b));
     });
   });
 
