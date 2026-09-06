@@ -8,7 +8,8 @@
 /// 입력과 바이트 단위로 같다. 용어는 `CONTEXT.md`에, kind 목록의 근거는
 /// `docs/adr/0001-token-kinds-are-lexical-only.md`에 있다.
 ///
-/// 아래층만 필요하다면 [tokenizeDart]만 가져다 쓰면 된다. 위젯 층은 아직 없다.
+/// 아래층만 필요하다면 [tokenizeDart]만 가져다 쓰면 된다.
 library;
 
 export 'src/tokenizer/dart_tokenizer.dart';
+export 'src/widget/syntax_palette.dart';
