@@ -1,0 +1,94 @@
+# NOTICES
+
+This package ships named colour presets whose values were extracted from
+third-party editor themes. Every upstream is MIT licensed, and MIT asks for one
+thing: keep the notice. This file is that notice.
+
+The presets are an **excerpt, not a reproduction.** The originals assign colours
+to dozens or hundreds of TextMate scopes; this package has eight token kinds, so
+each preset carries the colours the original gave to the scopes matching those
+eight. They do not look identical to the original editor.
+
+No logo or wordmark of any project below is used, no theme name appears in this
+package's own name, and this package is not affiliated with, endorsed by, or
+sponsored by any of them.
+
+---
+
+Solarized       Copyright (c) 2011 Ethan Schoonover (MIT)
+                via Visual Studio Code,
+                Copyright (c) 2015 - present Microsoft Corporation (MIT)
+
+    solarizedDark   github.com/microsoft/vscode
+                    @ 24ae5cf9707d8e79e8d11902157eeb471e135262
+                    extensions/theme-solarized-dark/themes/
+                      solarized-dark-color-theme.json
+    solarizedLight  same commit,
+                    extensions/theme-solarized-light/themes/
+                      solarized-light-color-theme.json
+
+One Dark        Copyright (c) 2016 GitHub Inc. (MIT)
+
+    oneDark         github.com/atom/one-dark-syntax
+                    @ 65eb019b75a1eb41217afbefa2b492d65b8f9af3
+                      styles/colors.less
+                    @ b2325912a0d221f0240023e418dc2ea72e7bc758
+                      styles/syntax/_base.less
+
+One Light       Copyright (c) 2016 GitHub Inc. (MIT)
+
+    oneLight        github.com/atom/one-light-syntax
+                    @ aaefc249c22a0ce8fb9c45382120ca1578267f28
+                      styles/colors.less, styles/syntax/_base.less
+
+Monokai         Copyright (c) 2015 Colorsublime.com (MIT)
+                via Visual Studio Code,
+                Copyright (c) 2015 - present Microsoft Corporation (MIT)
+
+    monokai         github.com/microsoft/vscode
+                    @ 00c6beca4414ad306a03138e573a164bcc0f0912
+                    extensions/theme-monokai/themes/monokai-color-theme.json
+
+Gruvbox         Copyright (c) 2017 JD (MIT),
+                a port of gruvbox by Pavel Pertsev
+
+                The original (github.com/morhetz/gruvbox) carries no LICENSE
+                file and no copyright line, so there is no upstream notice to
+                reproduce. Values were taken from the MIT-licensed port
+                instead, which does carry one.
+
+    gruvboxDark     VS Code Marketplace jdinhlife.gruvbox v1.29.0,
+                    extension/themes/gruvbox-dark-medium.json
+    gruvboxLight    same package,
+                    extension/themes/gruvbox-light-medium.json
+                    (source: github.com/jdinhify/vscode-theme-gruvbox)
+
+Tokyo Night     Copyright (c) 2018-present Enkia (MIT)
+
+    tokyoNight      github.com/tokyo-night/tokyo-night-vscode-theme
+                    @ da5546bc4163a02a30d6f3ced90d4ef7dfcb8460
+                      themes/tokyo-night-color-theme.json
+    tokyoNightLight same commit,
+                      themes/tokyo-night-light-color-theme.json
+
+Cobalt2         Copyright (c) 2018 Wes Bos, Roberto Achar (MIT)
+
+    cobalt2         github.com/wesbos/cobalt2-vscode
+                    @ c4e9574372b85afad1682ed0fdd1ac0411c62512
+                      theme/cobalt2.json
+
+---
+
+Themes deliberately not included, and why:
+
+    Dracula         US Reg. 6,306,339 (Zeno Rocha) names "syntax highlighters"
+                    among its goods. MIT conveys no trademark rights.
+    Nord            US Reg. 7,458,940 (NordSec B.V.) covers downloadable
+                    software and software development. Its licence was clean.
+    GitHub Dark/Light   GITHUB is a live mark and GitHub's brand policy
+                    restricts name use separately from the MIT licence.
+    Everforest      US Reg. 7,762,715 and EUIPO 018641989.
+    Monokai Pro     Proprietary; may not be sub-licensed or redistributed.
+
+This is a record of reading each project's LICENSE file and of direct USPTO
+TMSearch and TMview queries. It is not legal advice.
