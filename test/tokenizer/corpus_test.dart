@@ -1,7 +1,8 @@
 import 'dart:io';
 
-import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/partition.dart';
 
 /// partition을 **진짜 코드 덩어리**에 건다.
 ///
@@ -30,45 +31,35 @@ void main() {
       .where((f) => f.path.endsWith('.dart'))
       .toList();
 
-  /// 모든 문자가, 순서대로, 정확히 한 번.
-  void expectPartitions(String source, String label) {
-    expect(
-      tokenizeDart(source).map((t) => t.text).join(),
-      source,
-      reason: '$label이 토큰화를 거치며 달라졌다 — '
-          '화면에 그려지는 것이 더 이상 소비자가 건넨 바이트가 아니다',
-    );
-  }
-
   group('partition — 붙여넣기 계약이 기대는 성질', () {
-    // 부수 조건 둘. 어느 한쪽이 비면 아래 루프들은 공허하게 통과하고, 이
-    // 파일은 실패할 수 없는 게이트가 된다.
-    test('corpus가 비어 있지 않다', () {
+    // 빈 목록에 대한 루프는 공허하게 통과한다. 그래서 가드를 별도 test로 두지
+    // 않고 **루프와 같은 test 안에** 둔다 — `no_imports_test.dart`가 같은 이유로
+    // 같은 모양을 쓴다. 분리해 두면 이 파일의 partition 검사들이 개별로는 초록인
+    // 채 아무것도 돌리지 않는 상태가 가능하다.
+    test('픽스처 corpus 전체에 대해 성립한다', () {
       expect(
         fixtures,
         isNotEmpty,
-        reason: '픽스처가 없다 — 이 파일의 검사들은 아무것도 돌리지 않는다',
+        reason: '픽스처가 없다 — 이 검사는 아무것도 돌리지 않는다',
       );
+      for (final file in fixtures) {
+        expectPartitions(file.readAsStringSync(), label: file.path);
+      }
+    });
+
+    test('그리고 이 패키지 자신의 소스에 대해서도', () {
       expect(
         ownSource,
         isNotEmpty,
         reason: 'lib/ 아래 소스가 없다 — 자라는 쪽 corpus가 사라졌다',
       );
-    });
-
-    test('픽스처 corpus 전체에 대해 성립한다', () {
-      for (final file in fixtures) {
-        expectPartitions(file.readAsStringSync(), file.path);
-      }
-    });
-
-    test('그리고 이 패키지 자신의 소스에 대해서도', () {
       for (final file in ownSource) {
-        expectPartitions(file.readAsStringSync(), file.path);
+        expectPartitions(file.readAsStringSync(), label: file.path);
       }
     });
 
     test('그리고 그 전부를 CRLF로 바꿔서 한 번 더', () {
+      expect([...fixtures, ...ownSource], isNotEmpty);
       // 체크아웃이 무엇을 만들어냈든 무관하게 캐리지 리턴을 통과시킨다.
       // 개행으로 쪼개 다시 잇는 스캐너가 여기서 죽는다.
       for (final file in [...fixtures, ...ownSource]) {
@@ -78,7 +69,7 @@ void main() {
           contains('\r\n'),
           reason: '${file.path}에 개행이 없어 이 변환이 아무 일도 하지 않았다',
         );
-        expectPartitions(crlf, 'CRLF로 바꾼 ${file.path}');
+        expectPartitions(crlf, label: 'CRLF로 바꾼 ${file.path}');
       }
     });
   });

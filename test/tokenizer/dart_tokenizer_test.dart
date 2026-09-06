@@ -1,6 +1,8 @@
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/partition.dart';
+
 // 이 스위트의 하중을 받는 주장은 "색이 맞는가"가 아니라 "무엇이든 바뀌었는가"다.
 // 하이라이터는 소비자의 바이트와 화면 사이에 서는 물건이고, 화면에 보이는 것이
 // 붙여넣을 수 있는 그 파일이라는 것이 이 패키지의 주장이기 때문이다.
@@ -8,14 +10,6 @@ import 'package:flutter_test/flutter_test.dart';
 // 아래의 보간 세 사례는 참조 corpus에서 그대로 옮겨 왔다. 2026-09-02 측정 기준
 // 그 corpus 2603줄에서 어휘적으로 어려웠던 유일한 구문이며, 원본이 나중에
 // 고쳐 쓰이더라도 스캐너가 그것들에 대해 고정되도록 여기 재현한다.
-
-/// 모든 문자가, 순서대로, 정확히 한 번.
-///
-/// 붙여넣기 계약 그 자체다. 여러 곳에서 손으로 반복하면 한 곳이 어긋나므로
-/// matcher로 한 번만 쓴다.
-void expectPartitions(List<DartToken> tokens, String source, {String? reason}) {
-  expect(tokens.map((t) => t.text).join(), source, reason: reason);
-}
 
 void main() {
   group('partition — 붙여넣기 계약이 기대는 성질', () {
@@ -29,12 +23,9 @@ void main() {
           '\tfinal x = 1;\n'
           '  // no trailing newline';
 
-      final tokens = tokenizeDart(awkward);
-      expectPartitions(tokens, awkward);
-
-      // 부수 조건. partition만으로는 토큰 하나가 전부를 덮어도 만족되므로,
-      // 스캐너가 실제로 분류했다는 것을 여기서 확인한다.
-      expect(tokens.map((t) => t.kind).toSet().length, greaterThan(1));
+      // 부수 조건 - 토큰 하나가 전부를 덮어도 partition은 만족된다 - 은 이제
+      // `expectPartitions`가 모든 호출부에 대해 들고 있다.
+      expectPartitions(awkward);
     });
 
     test('그리고 빈 파일에 대해서도', () {
@@ -56,7 +47,7 @@ void main() {
       const source = "// somebody's name\nfinal x = 1;\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       expect(tokens.first.kind, DartTokenKind.comment);
       expect(tokens.first.text, "// somebody's name");
       expect(
@@ -77,7 +68,7 @@ void main() {
       const source = "/// the API's shape\nconst a = 'x';\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(strings, hasLength(1));
@@ -98,7 +89,7 @@ void main() {
       const source = "final text = '\${newValue ?? ''}'.trim();";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(
@@ -113,7 +104,7 @@ void main() {
       const source = "': \${selected.join(', ')}',";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(strings, hasLength(1));
@@ -124,7 +115,7 @@ void main() {
       const source = "'\${term.value ? '✓' : '✗'} \${term.key}',";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(
@@ -139,7 +130,9 @@ void main() {
       const source = "'\${map['{']}'";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      // 이 입력이 통째로 토큰 하나라는 것이 이 테스트의 주장이므로, kind가
+      // 하나인 것이 옳다. 분류 다양성 부수 조건은 여기서만 끈다.
+      expectPartitions(source, expectClassified: false);
       expect(tokens.single.kind, DartTokenKind.string);
     });
   });
@@ -152,7 +145,7 @@ void main() {
       const source = r"final p = r'a\' + 1;";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(
@@ -167,7 +160,7 @@ void main() {
       const source = "const a = '''\nline\n''';\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(strings.single.text, "'''\nline\n'''");
@@ -177,7 +170,7 @@ void main() {
       const source = 'a /* outer /* inner */ still outer */ b';
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final comments =
           tokens.where((t) => t.kind == DartTokenKind.comment).toList();
       expect(
@@ -195,7 +188,7 @@ void main() {
       const source = "final a = 'oops\nfinal b = 2;\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(strings.single.text, "'oops");
@@ -216,7 +209,7 @@ void main() {
       const source = "final a = '\${oops\nfinal b = 2;\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       final strings =
           tokens.where((t) => t.kind == DartTokenKind.string).toList();
       expect(strings.single.text, "'\${oops");
@@ -233,7 +226,7 @@ void main() {
       const source = 'const x = 0xFF + 1.5e3;';
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       expect(
         tokens.firstWhere((t) => t.kind == DartTokenKind.keyword).text,
         'const',
@@ -249,7 +242,7 @@ void main() {
       const source = '1.toString()';
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       expect(tokens.first.kind, DartTokenKind.number);
       expect(
         tokens.first.text,
@@ -265,7 +258,7 @@ void main() {
       // 눈에 보이는 이득 없이 리빌드마다 수천 번의 `TextStyle` 비교가 붙는다.
       final tokens = tokenizeDart('((( )))');
 
-      expectPartitions(tokens, '((( )))');
+      expectPartitions('((( )))');
       expect(
         tokens,
         hasLength(3),
@@ -279,7 +272,7 @@ void main() {
       const source = "// an em dash — and a check ✓\n";
       final tokens = tokenizeDart(source);
 
-      expectPartitions(tokens, source);
+      expectPartitions(source);
       expect(tokens.first.text, contains('—'));
       expect(tokens.first.text, contains('✓'));
     });
