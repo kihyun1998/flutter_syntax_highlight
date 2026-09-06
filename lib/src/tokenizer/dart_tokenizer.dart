@@ -55,47 +55,55 @@
 /// ```dart
 /// final text = '${newValue ?? ''}'.trim();
 /// : 'selectedRows: ${selected.join(', ')}',
-/// '${term.value ? '\u2713' : '\u2717'} ${term.key}',
+/// '${term.value ? '✓' : '✗'} ${term.key}',
 /// ```
 ///
-/// 따옴표를 단순히 짝지으면 세 번째가 문자열 / `\u2713`은 코드 / ` : `는 문자열 /
-/// `\u2717`은 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이 보여주려는 바로 그
+/// 따옴표를 단순히 짝지으면 세 번째가 문자열 / `✓`는 코드 / ` : `는 문자열 /
+/// `✗`는 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이 보여주려는 바로 그
 /// 두 글자에서. 그래서 [_stringEnd]와 [_interpolationEnd]는 **상호 재귀**다:
 /// 보간은 중첩 문자열을 이해하는 중괄호 카운터로 스캔된다. 리터럴 하나가 보간을
 /// 포함해 토큰 하나다.
 library;
 
-/// What a run of characters is, for the purpose of drawing it differently.
+/// 한 구간의 문자들이 무엇인지 — 다르게 그리기 위한 목적에 한해서.
 ///
-/// Deliberately coarse. Anything finer — distinguishing a type from a variable,
-/// a method call from a field — needs a parser rather than a scanner, and a
-/// half-right answer about what a name *means* is worse here than no answer,
-/// because it is wrong in a way a reader would believe.
+/// **의도적으로 거칠다.** 더 미세한 것 — 타입과 변수, 메서드 호출과 필드를
+/// 가르는 것 — 은 넣지 않는다. 어휘만으로 확정되지 않고 관습에 기댄 **추측**이기
+/// 때문이며, 이름이 *무엇을 뜻하는지*에 대한 반쯤 맞는 답은 답이 없는 것보다
+/// 나쁘다. 읽는 사람이 그것을 믿어 버리기 때문이다.
+///
+/// 무엇을 넣고 무엇을 거부했는지와 그 근거는
+/// `docs/adr/0001-token-kinds-are-lexical-only.md`에 있다.
 enum DartTokenKind {
-  /// Identifiers, whitespace, and anything unclassified.
+  /// 식별자, 공백, 그리고 분류되지 않은 모든 것.
   plain,
 
-  /// `//` to end of line, and `/* */` including nested pairs.
+  /// `//`부터 줄 끝까지, 그리고 중첩 쌍을 포함한 `/* */`.
   comment,
 
-  /// A reserved word, a built-in identifier, or a contextual keyword.
+  /// 예약어, 내장 식별자, 또는 문맥 키워드.
   keyword,
 
-  /// A string literal in full, interpolations included.
+  /// 문자열 리터럴 전체. 보간을 포함한다.
+  ///
+  /// **현재 판본의 동작이며, 바뀔 예정이다.** 보간 안을 재귀적으로 토큰화하기로
+  /// 결정되어 있고, 그러면 `'\${a}'`는 토큰 하나가 아니라 여러 토큰이 된다.
+  /// `docs/adr/0001-token-kinds-are-lexical-only.md`의 Consequences가 이 문장을
+  /// 이름으로 짚어 두었다.
   string,
 
-  /// An integer, double, or hex literal.
+  /// 정수, 실수, 또는 16진 리터럴.
   number,
 
-  /// Brackets, operators, separators.
+  /// 괄호, 연산자, 구분자.
   punctuation,
 }
 
-/// A run of source text and what it is.
+/// 소스 텍스트의 한 구간과, 그것이 무엇인지.
 class DartToken {
   const DartToken(this.text, this.kind);
 
-  /// The exact characters, cut from the source. Never rewritten.
+  /// 소스에서 잘라 낸 정확한 문자들. 다시 쓰이는 일은 없다.
   final String text;
 
   final DartTokenKind kind;
@@ -104,17 +112,17 @@ class DartToken {
   String toString() => 'DartToken(${kind.name}, ${text.length} chars)';
 }
 
-/// Splits [source] into a partition of typed runs.
+/// [source]를 kind가 붙은 구간들의 **partition**으로 쪼갠다.
 ///
-/// 같은 kind의 인접한 run은 하나로 합쳐지며, 이는 미관 문제가 아니다: 위젯 층은
+/// 같은 kind의 인접한 구간은 하나로 합쳐지며, 이는 미관 문제가 아니다: 위젯 층은
 /// 토큰 하나를 `TextSpan` 하나로 만들고, `SelectableText`는 스팬 트리가 같지
 /// 않다고 비교될 때마다 컨트롤러를 다시 만들며, `TextSpan`의 동등성은 깊은
 /// 순회다. 괄호마다 스팬을 내보내면 눈에 보이는 이득 없이 리빌드마다 수천 번의
 /// `TextStyle` 비교를 얹게 된다.
 List<DartToken> tokenizeDart(String source) {
-  // Two parallel lists rather than a token list built as we go: the scanner
-  // only ever appends an end offset, so "the tokens tile the source" is a
-  // property of the loop rather than something to remember at each branch.
+  // 진행하면서 토큰 목록을 만드는 대신 두 개의 평행 리스트를 쓴다: 스캐너는
+  // 끝 오프셋을 덧붙이기만 하므로, "토큰이 소스를 빈틈없이 덮는다"가 분기마다
+  // 기억해야 할 것이 아니라 루프의 성질이 된다.
   final kinds = <DartTokenKind>[];
   final ends = <int>[];
 
@@ -140,8 +148,8 @@ List<DartToken> tokenizeDart(String source) {
       i = _stringEnd(source, i, raw: false);
     } else if (_isIdentifierStart(c)) {
       final end = _identifierEnd(source, i);
-      // `r'...'` — the `r` is a prefix only where an identifier could not have
-      // continued, which is exactly when the identifier scan stops on a quote.
+      // `r'...'` — `r`가 접두사인 것은 식별자가 이어질 수 없었던 자리뿐이고,
+      // 그것은 정확히 식별자 스캔이 따옴표에서 멈춘 경우다.
       if (end == i + 1 &&
           c == _lowerR &&
           end < source.length &&
@@ -162,9 +170,8 @@ List<DartToken> tokenizeDart(String source) {
       kind = DartTokenKind.punctuation;
       i++;
     } else {
-      // Whitespace, and anything outside the classes above — including the
-      // halves of a surrogate pair, which arrive as two `plain` runs and are
-      // coalesced back into one token below.
+      // 공백, 그리고 위 분류 밖의 모든 것 — 대리 쌍의 두 반쪽도 포함한다.
+      // 그것들은 `plain` 구간 두 개로 들어와 아래에서 토큰 하나로 다시 합쳐진다.
       kind = DartTokenKind.plain;
       i++;
     }
@@ -184,7 +191,7 @@ List<DartToken> tokenizeDart(String source) {
   return tokens;
 }
 
-/// End of a `//` comment: the newline itself is **not** part of it.
+/// `//` 주석의 끝. 개행 자체는 주석에 **포함되지 않는다**.
 ///
 /// 체크아웃이 CRLF를 만든 곳에서는 뒤따르는 `\r`가 주석에 포함된다. 의도적이다 —
 /// 줄이 어디서 끝나는지에 대한 규칙을 새로 만드는 대신 캐리지 리턴을 토큰 안에
@@ -202,7 +209,7 @@ int _lineCommentEnd(String source, int i) {
   return j;
 }
 
-/// End of a `/* */` comment, counting nested pairs.
+/// `/* */` 주석의 끝. 중첩 쌍을 센다.
 ///
 /// Dart는 C와 달리 블록 주석을 중첩하므로 `/* /* */ */`는 주석 하나이고, 첫
 /// `*/`에서 멈추는 스캐너는 파일의 꼬리를 잘못 칠한 채로 남긴다. 2026-09-02에
@@ -227,10 +234,10 @@ int _blockCommentEnd(String source, int i) {
   return source.length;
 }
 
-/// End of a string literal that starts at [i], interpolations included.
+/// [i]에서 시작하는 문자열 리터럴의 끝. 보간을 포함한다.
 ///
-/// [raw] suppresses escape handling: in `r'a\'` the backslash is a character,
-/// so consuming two would run past the closing quote.
+/// [raw]는 escape 처리를 끈다: `r'a\'`에서 백슬래시는 그냥 한 문자이므로,
+/// 두 글자를 소비하면 닫는 따옴표를 지나쳐 버린다.
 ///
 /// 닫히지 않은 홑따옴표 문자열은 파일 끝까지 달리지 않고 개행에서 멈춘다. 이
 /// 스캐너가 이해하지 못하는 구문의 피해를 파일의 나머지가 아니라 그것이 있는
@@ -274,7 +281,7 @@ int _stringEnd(String source, int i, {required bool raw}) {
   return source.length;
 }
 
-/// End of a `${...}` interpolation, given [j] just past the opening brace.
+/// `${...}` 보간의 끝. [j]는 여는 중괄호 바로 다음이다.
 ///
 /// [_stringEnd]와 상호 재귀이며, 그것이 요점이다: 중괄호 카운터만으로는
 /// `'${selected.join(', ')}'`를 틀린다. 안쪽의 `'`가 바깥 리터럴을 끝내 버리기
@@ -303,8 +310,8 @@ int _interpolationEnd(String source, int j, {required bool stopAtNewline}) {
   return source.length;
 }
 
-/// End of a numeric literal. Conservative: over-consuming mis-colours a
-/// character, and the partition is unaffected either way.
+/// 숫자 리터럴의 끝. 보수적으로 잡는다: 과하게 소비해도 문자 하나를 잘못
+/// 칠할 뿐이고, partition은 어느 쪽이든 영향받지 않는다.
 int _numberEnd(String source, int i) {
   var j = i;
   if (source.codeUnitAt(j) == _zero && j + 1 < source.length) {
@@ -320,8 +327,8 @@ int _numberEnd(String source, int i) {
   while (j < source.length && _isDigit(source.codeUnitAt(j))) {
     j++;
   }
-  // A `.` is part of the number only when a digit follows it, so `1.toString()`
-  // keeps its method name out of the literal.
+  // `.`이 숫자의 일부인 것은 뒤에 숫자가 올 때뿐이므로, `1.toString()`은
+  // 메서드 이름을 리터럴 밖에 둔다.
   if (j + 1 < source.length &&
       source.codeUnitAt(j) == _dot &&
       _isDigit(source.codeUnitAt(j + 1))) {
@@ -371,7 +378,7 @@ bool _isIdentifierStart(int c) =>
 
 bool _isIdentifierPart(int c) => _isIdentifierStart(c) || _isDigit(c);
 
-/// ASCII punctuation, minus the characters handled earlier in the scan.
+/// ASCII 구두점에서, 스캔의 앞 단계가 이미 처리한 문자들을 뺀 것.
 bool _isPunctuation(int c) =>
     (c >= 0x21 && c <= 0x2F) ||
     (c >= 0x3A && c <= 0x40) ||

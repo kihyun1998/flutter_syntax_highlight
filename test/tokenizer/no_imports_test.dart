@@ -12,9 +12,17 @@ import 'package:flutter_test/flutter_test.dart';
 /// 아무것도 그것을 보고하지 않는다. 그 다음부터 "어려운 부분은 위젯 없이 테스트할
 /// 수 있는 순수 함수"라는 주장은 거짓이 되지만 초록은 그대로다.
 void main() {
-  // `import`만이 아니라 `export`도 본다. `export 'package:flutter/...'`는 정확히
-  // 같은 구멍이고, 정규식 하나 차이다.
-  final directive = RegExp('''^\\s*(import|export)\\s+['"]''');
+  // `import`만 보면 세 방향으로 샌다:
+  //
+  //  * `export 'package:flutter/...'`는 정확히 같은 구멍이다.
+  //  * **`part`가 가장 현실적인 구멍이다.** 토크나이저를 Flutter를 import하는
+  //    라이브러리의 `part`로 만들면, 이 파일에는 지시문 한 줄 없이 `Color`가
+  //    들어온다. 지시문을 세는 검사가 통째로 우회된다.
+  //  * `import'dart:math';`는 공백 없이도 유효한 Dart다. `\\s+`를 요구하면 놓친다.
+  //
+  // 그래서 따옴표를 요구하지 않고 지시문 키워드 자체를 본다. 거짓 양성이 나는
+  // 방향이며(`part`로 시작하는 식별자 줄), 그쪽이 안전한 방향이다.
+  final directive = RegExp(r'^\s*(import|export|part)\b');
 
   test('토크나이저 층은 아무것도 import하지 않는다', () {
     final dir = Directory('lib/src/tokenizer');
@@ -30,12 +38,18 @@ void main() {
         .where((f) => f.path.endsWith('.dart'))
         .toList();
 
-    // 부수 조건. 파일이 하나도 없으면 아래 루프는 공허하게 통과한다 — 층이
-    // 옮겨지거나 이름이 바뀌었을 때 이 테스트가 조용히 무의미해지는 경로다.
+    // 부수 조건 둘. 이 가드의 경계는 **디렉터리**라서, 지키려는 대상이 거기서
+    // 빠져나가면 루프가 공허하게 통과한다.
     expect(
       files,
       isNotEmpty,
       reason: '읽을 파일이 없다 — 이 테스트는 실패할 수 없는 상태가 되었다',
+    );
+    expect(
+      files.map((f) => f.uri.pathSegments.last),
+      contains('dart_tokenizer.dart'),
+      reason: '스캐너가 이 디렉터리에 없다. 다른 .dart 파일 하나만 남아 있어도 '
+          '위의 isNotEmpty는 통과하므로, 가드가 조용히 빈 채로 초록이 된다',
     );
 
     final offenders = <String>[];
