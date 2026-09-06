@@ -1,0 +1,24 @@
+# `.pubignore`는 `.gitignore`를 보완하지 않고 **대체한다.** 여기 적히지 않은 것은
+# git이 무시하든 말든 배포 아카이브에 들어간다 — 이 파일을 처음 만들었을 때
+# 실제로 `build/` 아래 45MB짜리 캐시가 아카이브에 실렸다.
+
+# 빌드 산출물
+build/
+.dart_tool/
+
+# 도구·IDE 파일
+.idea/
+*.iml
+.metadata
+
+# 참조 구현 스냅샷. 패키지의 일부가 아니라, 구현이 자기 결과물을 대조하기 위한
+# 원본이다 — reference/README.md 참조.
+reference/
+
+# 저장소 운영 문서. 소비자가 받을 이유가 없다. `docs/`를 빼는 데에는 이유가
+# 하나 더 있다 — pub은 top-level `docs`를 `doc`으로 바꾸라고 경고하는데,
+# `docs/adr` 경로는 CLAUDE.md의 규약이 가리키는 자리라 이름을 바꿀 수 없다.
+# 배포에서 빼면 규약을 지키면서 경고도 사라진다.
+docs/
+CLAUDE.md
+CONTEXT.md

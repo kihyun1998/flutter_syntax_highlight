@@ -1,0 +1,15 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # 참조 구현 스냅샷. 패키지의 일부가 아니고 `package:example/...`를 import
+    # 하므로 여기서는 컴파일되지 않는다. 손대지 않고 두는 것이 요점이므로
+    # 분석에서도 제외한다 — reference/README.md 참조.
+    - reference/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
