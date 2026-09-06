@@ -11,6 +11,15 @@ import '../support/partition.dart';
 // 그 corpus 2603줄에서 어휘적으로 어려웠던 유일한 구문이며, 원본이 나중에
 // 고쳐 쓰이더라도 스캐너가 그것들에 대해 고정되도록 여기 재현한다.
 
+/// 토큰 스트림을 `kind|text` 줄들로 편다.
+///
+/// 보간 검사는 **성질이 아니라 스트림 전체를 비교한다.** 다섯 입력은 전부
+/// 정전(canon)이고, 성질만 보는 검사는 통과하는 잘못된 스트림이 항상 존재한다.
+/// 무엇이 바뀌든 반드시 빨간색이 되어야 한다.
+List<String> streamOf(String source) => tokenizeDart(source)
+    .map((t) => '${t.kind.name}|${t.text}')
+    .toList(growable: false);
+
 void main() {
   group('partition — 붙여넣기 계약이 기대는 성질', () {
     test('그리고 이 체크아웃이 오늘 만들어내지 않을 줄바꿈 방식에 대해서도', () {
@@ -81,59 +90,91 @@ void main() {
     // ' : '는 문자열 / ✗는 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이
     // 보여주려는 바로 그 두 글자에서.
     //
-    // 이 네 테스트와, 아래 group의 `닫히지 않은 보간` 하나까지 다섯은 지금
-    // 스캐너가 하는 일을 기록한다. 보간 안을 재귀적으로
-    // 토큰화하기로 한 결정이 반영되면 "리터럴 전체가 토큰 하나"라는 주장은
-    // 거짓이 되고, 그때 전체 토큰 스트림 비교로 다시 쓰인다.
+    // 보간 안이 재귀적으로 토큰화되면서 "리터럴 전체가 토큰 하나"는 거짓이
+    // 되었다. 새 주장은 그보다 세다: 원래는 *쪼개지지 않았다*만 확인했지만,
+    // 이제는 **쪼개진 결과가 옳은지**를 확인한다 — quote-pair 스캐너가 실제로
+    // 저지르는 실패(안팎 반전)를 직접 겨눈다.
     test('보간 안의 중첩된 빈 문자열', () {
       const source = "final text = '\${newValue ?? ''}'.trim();";
-      final tokens = tokenizeDart(source);
-
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
-      expect(
-        strings,
-        hasLength(1),
-        reason: '리터럴이 쪼개졌다 — 보간이 그것을 일찍 끝냈다',
-      );
-      expect(strings.single.text, "'\${newValue ?? ''}'");
+      expect(streamOf(source), [
+        'keyword|final',
+        'plain| text ',
+        'punctuation|=',
+        'plain| ',
+        "string|'",
+        'punctuation|\${',
+        'plain|newValue ',
+        'punctuation|??',
+        'plain| ',
+        "string|''", // 중첩된 빈 문자열이 문자열로 나온다
+        'punctuation|}',
+        "string|'",
+        'punctuation|.',
+        'function|trim',
+        'punctuation|();',
+      ]);
     });
 
     test('join 안에서 쉼표를 든 중첩 문자열', () {
       const source = "': \${selected.join(', ')}',";
-      final tokens = tokenizeDart(source);
-
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
-      expect(strings, hasLength(1));
-      expect(strings.single.text, "': \${selected.join(', ')}'");
+      expect(streamOf(source), [
+        "string|': ",
+        'punctuation|\${',
+        'plain|selected',
+        'punctuation|.',
+        'function|join',
+        'punctuation|(',
+        "string|', '", // 쉼표가 든 중첩 문자열이 바깥을 끝내지 않는다
+        'punctuation|)}',
+        "string|'",
+        'punctuation|,',
+      ]);
     });
 
     test('보간 둘, 그중 하나는 문자열 둘의 삼항을 품는다', () {
+      // 이 패키지의 주장이 스트림으로 드러나는 자리다. 중첩된 '✓'와 '✗'가
+      // **문자열로** 나오고, 그것을 감싼 조건식은 코드로 나온다.
       const source = "'\${term.value ? '✓' : '✗'} \${term.key}',";
-      final tokens = tokenizeDart(source);
-
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
-      expect(
-        strings,
-        hasLength(1),
-        reason: '✓/✗ 삼항이 리터럴을 조각냈다',
-      );
-      expect(strings.single.text, "'\${term.value ? '✓' : '✗'} \${term.key}'");
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        'plain|term',
+        'punctuation|.',
+        'plain|value ',
+        'punctuation|?',
+        'plain| ',
+        "string|'✓'", // ← 문자열이다. quote-pair 스캐너는 여기를 코드로 칠한다
+        'plain| ',
+        'punctuation|:',
+        'plain| ',
+        "string|'✗'", // ← 마찬가지
+        'punctuation|}',
+        'string| ',
+        'punctuation|\${',
+        'plain|term',
+        'punctuation|.',
+        'plain|key',
+        'punctuation|}',
+        "string|'",
+        'punctuation|,',
+      ]);
     });
 
     test('그리고 보간된 문자열 안의 중괄호는 닫는 중괄호가 아니다', () {
       const source = "'\${map['{']}'";
-      final tokens = tokenizeDart(source);
-
-      // 이 입력이 통째로 토큰 하나라는 것이 이 테스트의 주장이므로, kind가
-      // 하나인 것이 옳다. 분류 다양성 부수 조건은 여기서만 끈다.
-      expectPartitions(source, expectClassified: false);
-      expect(tokens.single.kind, DartTokenKind.string);
+      expectPartitions(source);
+      expect(streamOf(source), [
+        "string|'",
+        'punctuation|\${',
+        'plain|map',
+        'punctuation|[',
+        "string|'{'", // 이 중괄호가 보간을 끝냈다면 뒤가 전부 어긋난다
+        'punctuation|]}',
+        "string|'",
+      ]);
     });
   });
 
@@ -206,18 +247,64 @@ void main() {
       // 보간 스캐너에 넘겼는데 그쪽에는 자기 개행 경계가 없어 파일 끝을
       // 돌려주었다. 두 글자가 보장을 빠져나가기에 충분했고, 위의 테스트는
       // `'oops`에 `$`가 없어서 그것을 볼 수 없었다.
+      //
+      // 재귀 토큰화 뒤에도 그 경계는 그대로다. 이제는 스트림 전체로 확인한다 —
+      // 둘째 줄이 코드로 나오는 것이 눈에 보인다.
       const source = "final a = '\${oops\nfinal b = 2;\n";
-      final tokens = tokenizeDart(source);
-
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
-      expect(strings.single.text, "'\${oops");
+      expect(streamOf(source), [
+        'keyword|final',
+        'plain| a ',
+        'punctuation|=',
+        'plain| ',
+        "string|'",
+        'punctuation|\${',
+        'plain|oops\n', // 개행에서 보간이 끝난다
+        'keyword|final', // 그리고 둘째 줄은 코드로 돌아온다
+        'plain| b ',
+        'punctuation|=',
+        'plain| ',
+        'number|2',
+        'punctuation|;',
+        'plain|\n',
+      ]);
+      // 부수 조건 — 둘째 줄이 문자열에 삼켜지지 않았다.
       expect(
-        tokens.where((t) => t.kind == DartTokenKind.keyword).length,
+        tokenizeDart(source)
+            .where((t) => t.kind == DartTokenKind.keyword)
+            .length,
         2,
         reason: '파일의 나머지가 문자열 하나로 칠해졌다',
       );
+    });
+  });
+
+  group('경계를 정한 스캐너와 다시 훑는 스캐너가 어긋나는 자리', () {
+    // 보간의 끝은 중괄호를 세는 스캐너가 정하고, 그 안은 바깥과 같은 디스패치가
+    // 다시 훑는다. 둘은 문자열에 대해서는 같은 함수를 쓰므로 어긋날 수 없지만
+    // **주석에 대해서는 다르다** — 중괄호 세는 쪽은 `//`를 모른다.
+    //
+    // 보간 안의 주석은 유효한 Dart가 아니다. 그래도 들어오면 partition이
+    // 깨져서는 안 된다. 소비자의 코드는 얌전할 의무가 없고, 이 패키지가 파는
+    // 것이 바로 그 보장이다.
+    test('보간 안의 줄 주석이 닫는 중괄호를 삼켜도 partition은 성립한다', () {
+      const source = "'\${a // b}'";
+      expectPartitions(source, expectClassified: false);
+    });
+
+    test('여러 줄에 걸쳐도', () {
+      const source = "'\${a // b\nc}'";
+      expectPartitions(source);
+    });
+
+    test('삼중 따옴표 안에서도', () {
+      const source = "'''\${a // b}'''";
+      expectPartitions(source, expectClassified: false);
+    });
+
+    test('블록 주석이 닫는 중괄호를 품어도', () {
+      const source = "'\${/* x }*/ y}'";
+      expectPartitions(source);
     });
   });
 

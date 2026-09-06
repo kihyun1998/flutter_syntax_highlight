@@ -63,8 +63,10 @@
 /// 두 글자에서. 그래서 [_stringEnd]와 [_interpolationEnd]는 **상호 재귀**다:
 /// 보간은 중첩 문자열을 이해하는 중괄호 카운터로 스캔된다.
 ///
-/// 보간은 아직 바깥 문자열 토큰 안에 들어 있다. 다만 리터럴이 통째로 토큰
-/// 하나인 것은 더 이상 아니다 — [DartTokenKind.escape]가 그 안에서 잘려 나간다.
+/// **그리고 보간 안은 바깥과 같은 규칙으로 다시 훑는다.** 그래서 위 세 번째
+/// 예의 `'✓'`는 문자열로 나오고, 그것을 감싼 조건식은 코드로 나온다 — 따옴표를
+/// 단순히 짝짓는 스캐너가 정확히 반대로 칠하는 그 자리다. 리터럴 하나가 토큰
+/// 하나인 것은 더 이상 아니다.
 library;
 
 /// 한 구간의 문자들이 무엇인지 — 다르게 그리기 위한 목적에 한해서.
@@ -86,13 +88,13 @@ enum DartTokenKind {
   /// 예약어, 내장 식별자, 또는 문맥 키워드.
   keyword,
 
-  /// 문자열 리터럴 중 [escape]로 잘려 나가지 않은 부분.
+  /// 문자열 리터럴 중 [escape]와 보간으로 잘려 나가지 않은 부분.
   ///
-  /// **더 이상 리터럴 전체가 아니다.** `escape`가 생기면서 `'a\n'`은 `'a` /
-  /// `\n` / `'` 세 토큰이 된다. 보간은 아직 이 토큰 안에 들어 있으나 그것도
-  /// 바뀔 예정이다 — 보간 안을 재귀적으로 토큰화하기로 결정되어 있다.
-  /// `docs/adr/0001-token-kinds-are-lexical-only.md`의 Consequences가 이 문장을
-  /// 이름으로 짚어 두었고, 여기 두 번에 걸쳐 반영된다.
+  /// **리터럴 전체가 아니다.** `'a\n'`은 `'a` / `\n` / `'` 세 토큰이고,
+  /// `'\${x}'`는 `'` / `\${` / `x` / `}` / `'` 다섯 토큰이다 — 보간 안은
+  /// 바깥과 같은 규칙으로 다시 훑기 때문에 그 안의 문자열은 다시 이 kind로
+  /// 나온다. `docs/adr/0001-token-kinds-are-lexical-only.md`의 Consequences가
+  /// 이 문장을 이름으로 짚어 두었고, 두 번에 걸쳐 반영되었다.
   string,
 
   /// 정수, 실수, 또는 16진 리터럴.
@@ -137,15 +139,48 @@ class DartToken {
 /// 않다고 비교될 때마다 컨트롤러를 다시 만들며, `TextSpan`의 동등성은 깊은
 /// 순회다. 괄호마다 스팬을 내보내면 눈에 보이는 이득 없이 리빌드마다 수천 번의
 /// `TextStyle` 비교를 얹게 된다.
+typedef _Emit = void Function(DartTokenKind kind, int end);
+
 List<DartToken> tokenizeDart(String source) {
   // 진행하면서 토큰 목록을 만드는 대신 두 개의 평행 리스트를 쓴다: 스캐너는
   // 끝 오프셋을 덧붙이기만 하므로, "토큰이 소스를 빈틈없이 덮는다"가 분기마다
   // 기억해야 할 것이 아니라 루프의 성질이 된다.
+  //
+  // 그 쌍을 클로저 뒤에 둔다. 보간을 재귀적으로 스캔하면서 내보내는 자리가
+  // 셋으로 늘었고, 리스트 두 개를 그만큼 돌리면 불변식이 세 곳에 흩어진다.
   final kinds = <DartTokenKind>[];
   final ends = <int>[];
+  void emit(DartTokenKind kind, int end) {
+    kinds.add(kind);
+    ends.add(end);
+  }
 
-  var i = 0;
-  while (i < source.length) {
+  _scanRange(source, 0, source.length, emit);
+
+  final tokens = <DartToken>[];
+  var runStart = 0;
+  for (var n = 0; n < ends.length; n++) {
+    if (n == ends.length - 1 || kinds[n + 1] != kinds[n]) {
+      tokens.add(DartToken(source.substring(runStart, ends[n]), kinds[n]));
+      runStart = ends[n];
+    }
+  }
+  return tokens;
+}
+
+/// `[from, to)`를 훑으며 토큰을 [emit]으로 내보낸다.
+///
+/// **자기를 다시 부른다.** 보간 안의 코드는 바깥과 같은 규칙으로 스캔되어야
+/// 하고, 그것이 이 패키지의 요점이다 — `'\${a ? 'x' : 'y'}'`에서 안쪽 `'x'`가
+/// 문자열로 그려진다. 따옴표 쌍을 맞추는 스캐너는 정확히 그 반대로 칠한다.
+///
+/// 내보내는 끝 오프셋을 [to]로 자른다. 경계를 정한 [_interpolationEnd]와 여기의
+/// 하위 스캔이 어긋날 수 있는 자리가 하나 있기 때문이다 — 보간 안의 `//`는
+/// 유효한 Dart가 아니지만, 들어오면 줄 주석 스캐너가 닫는 중괄호를 지나쳐 버린다.
+/// 자르면 토큰들이 이 구간을 정확히 덮고, partition이 어느 쪽이든 성립한다.
+void _scanRange(String source, int from, int to, _Emit emit) {
+  var i = from;
+  while (i < to) {
     final c = source.codeUnitAt(i);
     final DartTokenKind kind;
 
@@ -162,13 +197,10 @@ List<DartToken> tokenizeDart(String source) {
         i++;
       }
     } else if (c == _singleQuote || c == _doubleQuote) {
-      // 문자열만 토큰 하나로 끝나지 않는다. escape는 그 안에서 잘려 나오므로
-      // 이 분기는 아래의 `kinds.add`/`ends.add` 한 쌍을 쓰지 못하고 직접
-      // 내보낸다.
-      final escapes = <int>[];
-      final end = _stringEnd(source, i, raw: false, escapes: escapes);
-      _emitStringRun(i, end, escapes, kinds, ends);
-      i = end;
+      // 문자열은 토큰 하나로 끝나지 않는다. escape가 잘려 나가고 보간이 그
+      // 안에서 재귀적으로 스캔되므로, 이 분기는 아래의 `emit` 한 번을 쓰지
+      // 못하고 직접 내보낸다.
+      i = _scanStringLiteral(source, i, i, raw: false, emit: emit, to: to);
       continue;
     } else if (_isIdentifierStart(c)) {
       final end = _identifierEnd(source, i);
@@ -179,13 +211,11 @@ List<DartToken> tokenizeDart(String source) {
           end < source.length &&
           (source.codeUnitAt(end) == _singleQuote ||
               source.codeUnitAt(end) == _doubleQuote)) {
-        // 원시 문자열도 escape 경로를 지난다. `raw`가 기록을 막으므로 결과는
-        // 토큰 하나로 같지만, 특례를 없애야 "원시 문자열에서는 escape가 나오지
-        // 않는다"는 검사가 구조 때문이 아니라 `raw` 판정 때문에 통과하게 된다.
-        final escapes = <int>[];
-        final end2 = _stringEnd(source, end, raw: true, escapes: escapes);
-        _emitStringRun(i, end2, escapes, kinds, ends);
-        i = end2;
+        // 원시 문자열도 같은 경로를 지난다. `raw`가 escape와 보간 처리를 모두
+        // 막으므로 결과는 토큰 하나로 같지만, 특례를 없애야 "원시 문자열에서는
+        // escape가 나오지 않는다"는 검사가 경로 구조 때문이 아니라 `raw` 판정
+        // 때문에 통과하게 된다.
+        i = _scanStringLiteral(source, i, end, raw: true, emit: emit, to: to);
         continue;
       } else {
         // 키워드를 **먼저** 본다. 이 순서가 뒤집히면 `if(x)`의 `if`가 함수
@@ -212,57 +242,13 @@ List<DartToken> tokenizeDart(String source) {
       i++;
     } else {
       // 공백, 그리고 위 분류 밖의 모든 것 — 대리 쌍의 두 반쪽도 포함한다.
-      // 그것들은 `plain` 구간 두 개로 들어와 아래에서 토큰 하나로 다시 합쳐진다.
+      // 그것들은 `plain` 구간 두 개로 들어와 나중에 토큰 하나로 다시 합쳐진다.
       kind = DartTokenKind.plain;
       i++;
     }
 
-    kinds.add(kind);
-    ends.add(i);
-  }
-
-  final tokens = <DartToken>[];
-  var runStart = 0;
-  for (var n = 0; n < ends.length; n++) {
-    if (n == ends.length - 1 || kinds[n + 1] != kinds[n]) {
-      tokens.add(DartToken(source.substring(runStart, ends[n]), kinds[n]));
-      runStart = ends[n];
-    }
-  }
-  return tokens;
-}
-
-/// `[start, end)` 구간을 `string`과 `escape`가 번갈아 나오는 토큰들로 내보낸다.
-///
-/// [escapes]는 [_stringEnd]가 기록한 백슬래시 위치들이고, 이미 오름차순이다.
-/// 여기서 하는 일은 그 위치들로 구간을 자르는 것뿐 — 문자열의 범위를 다시
-/// 계산하지 않는다. 두 곳이 범위를 따로 정하면 어긋날 수 있고, partition은
-/// 그 어긋남을 그대로 드러낸다.
-///
-/// 기록된 위치는 언제나 `end`보다 앞이다. [_stringEnd]가 스캔을 마친 지점을
-/// `end`로 돌려주고 기록은 그 스캔 도중에만 일어나기 때문이다. 파일 끝에서
-/// 잘린 escape는 아래의 `stop` 클램프가 받는다.
-void _emitStringRun(
-  int start,
-  int end,
-  List<int> escapes,
-  List<DartTokenKind> kinds,
-  List<int> ends,
-) {
-  var at = start;
-  for (final e in escapes) {
-    if (e > at) {
-      kinds.add(DartTokenKind.string);
-      ends.add(e);
-    }
-    final stop = e + 2 > end ? end : e + 2;
-    kinds.add(DartTokenKind.escape);
-    ends.add(stop);
-    at = stop;
-  }
-  if (at < end) {
-    kinds.add(DartTokenKind.string);
-    ends.add(end);
+    if (i > to) i = to;
+    emit(kind, i);
   }
 }
 
@@ -309,37 +295,56 @@ int _blockCommentEnd(String source, int i) {
   return source.length;
 }
 
-/// [i]에서 시작하는 문자열 리터럴의 끝. 보간을 포함한다.
+/// [quoteAt]에서 시작하는 문자열 리터럴을 훑고 그 끝을 돌려준다.
 ///
-/// [raw]는 escape 처리를 끈다: `r'a\'`에서 백슬래시는 그냥 한 문자이므로,
-/// 두 글자를 소비하면 닫는 따옴표를 지나쳐 버린다.
+/// [emit]이 주어지면 토큰을 내보내고, 아니면 경계만 계산한다. 두 가지 모드가
+/// 한 함수인 것이 요점이다 — [_interpolationEnd]는 중첩 문자열을 **건너뛰기만**
+/// 해야 하는데, 경계를 정하는 코드가 두 벌이면 서로 어긋날 수 있고 partition이
+/// 그 어긋남을 그대로 드러낸다.
+///
+/// [runStart]는 토큰 구간의 시작이다. 원시 문자열에서는 접두사 `r`가 따옴표보다
+/// 앞에 있으므로 [quoteAt]과 다르다.
+///
+/// [raw]는 escape 처리를 끈다: `r'a\'`에서 백슬래시는 그냥 한 문자이므로, 두
+/// 글자를 소비하면 닫는 따옴표를 지나쳐 버린다. 원시 문자열에는 보간도 없다.
 ///
 /// 닫히지 않은 홑따옴표 문자열은 파일 끝까지 달리지 않고 개행에서 멈춘다. 이
 /// 스캐너가 이해하지 못하는 구문의 피해를 파일의 나머지가 아니라 그것이 있는
 /// 줄에 가둔다.
-int _stringEnd(
+int _scanStringLiteral(
   String source,
-  int i, {
+  int runStart,
+  int quoteAt, {
   required bool raw,
-  List<int>? escapes,
+  _Emit? emit,
+  int? to,
 }) {
-  final quote = source.codeUnitAt(i);
-  final triple = i + 2 < source.length &&
-      source.codeUnitAt(i + 1) == quote &&
-      source.codeUnitAt(i + 2) == quote;
-  var j = i + (triple ? 3 : 1);
+  final quote = source.codeUnitAt(quoteAt);
+  final triple = quoteAt + 2 < source.length &&
+      source.codeUnitAt(quoteAt + 1) == quote &&
+      source.codeUnitAt(quoteAt + 2) == quote;
+  var j = quoteAt + (triple ? 3 : 1);
+
+  // 아직 내보내지 않은 `string` 구간의 시작. 원시 접두사가 있으면 따옴표보다
+  // 앞에서 시작한다.
+  var segment = runStart;
+  void flush(int upTo) {
+    if (emit != null && upTo > segment) emit(DartTokenKind.string, upTo);
+    segment = upTo;
+  }
 
   while (j < source.length) {
     final c = source.codeUnitAt(j);
 
     if (!raw && c == _backslash) {
-      // 위치만 적어 둔다. 어디서 자를지는 [_emitStringRun]이 정하고, 여기서는
-      // 스캔이 이미 하고 있는 일 — 백슬래시와 그 다음 한 문자를 건너뛰는 것 —
-      // 에 기록 한 줄을 얹을 뿐이다.
-      escapes?.add(j);
-      j += 2;
+      flush(j);
+      final stop = j + 2 > source.length ? source.length : j + 2;
+      if (emit != null) emit(DartTokenKind.escape, stop);
+      j = stop;
+      segment = j;
       continue;
     }
+
     if (!raw &&
         c == _dollar &&
         j + 1 < source.length &&
@@ -348,39 +353,55 @@ int _stringEnd(
       // 구멍이 된다: 닫히지 않은 보간이 파일 끝까지 달려 나머지 전부를 문자열로
       // 칠하는데, 그것이 바로 아래의 경계가 막으려는 것이다. 삼중 따옴표
       // 리터럴만은 진짜로 여러 줄에 걸칠 수 있으므로 예외다.
-      j = _interpolationEnd(
-        source,
-        j + 2,
-        stopAtNewline: !triple,
-        escapes: escapes,
-      );
+      final (end, closed) =
+          _interpolationEnd(source, j + 2, stopAtNewline: !triple);
+      if (emit != null) {
+        flush(j);
+        emit(DartTokenKind.punctuation, j + 2); // `${`
+        _scanRange(source, j + 2, closed ? end - 1 : end, emit);
+        if (closed) emit(DartTokenKind.punctuation, end); // `}`
+        segment = end;
+      }
+      j = end;
       continue;
     }
+
     if (c == quote) {
-      if (!triple) return j + 1;
+      if (!triple) {
+        j += 1;
+        break;
+      }
       if (j + 2 < source.length &&
           source.codeUnitAt(j + 1) == quote &&
           source.codeUnitAt(j + 2) == quote) {
-        return j + 3;
+        j += 3;
+        break;
       }
     }
-    if (!triple && c == _newline) return j;
+    if (!triple && c == _newline) break;
     j++;
   }
-  return source.length;
+
+  if (to != null && j > to) j = to;
+  flush(j);
+  return j;
 }
 
-/// `${...}` 보간의 끝. [j]는 여는 중괄호 바로 다음이다.
+/// `${...}` 보간의 끝과, 닫는 중괄호를 실제로 만났는지.
 ///
-/// [_stringEnd]와 상호 재귀이며, 그것이 요점이다: 중괄호 카운터만으로는
+/// [_scanStringLiteral]과 상호 재귀이며, 그것이 요점이다: 중괄호 카운터만으로는
 /// `'${selected.join(', ')}'`를 틀린다. 안쪽의 `'`가 바깥 리터럴을 끝내 버리기
 /// 때문이다. 중첩된 따옴표를 문자열 스캐너에 되돌려 주는 것이, 2026-09-02에
 /// 측정한 세 개의 실제 사례를 통째로 나오게 하는 장치다.
-int _interpolationEnd(
+///
+/// 여기서는 **건너뛰기만** 한다. 보간 안의 토큰은 호출자가 [_scanRange]로 다시
+/// 훑어 내보낸다. 닫는 중괄호를 만났는지 같이 돌려주는 것은 그 중괄호를
+/// 구두점으로 내보내야 하는데, 개행에서 멈춘 경우에는 내보낼 중괄호가 아예
+/// 없기 때문이다.
+(int, bool) _interpolationEnd(
   String source,
   int j, {
   required bool stopAtNewline,
-  List<int>? escapes,
 }) {
   var depth = 1;
   while (j < source.length) {
@@ -392,22 +413,23 @@ int _interpolationEnd(
       // 경계가 어긋나고 `escape` kind까지 잘못 붙는다.
       final raw = source.codeUnitAt(j - 1) == _lowerR &&
           (j - 2 < 0 || !_isIdentifierPart(source.codeUnitAt(j - 2)));
-      j = _stringEnd(source, j, raw: raw, escapes: escapes);
+      j = _scanStringLiteral(source, j, j, raw: raw);
       continue;
     }
     // 감싸고 있는 리터럴에서 물려받는다. 이것이 없으면 `'${oops`가
-    // `source.length`를 돌려주고 [_stringEnd]의 개행 경계에는 영영 닿지 않는다 —
-    // 무언가를 가두는 것이 존재 이유인 분기를 통과하는, 가둬지지 않은 질주다.
-    if (stopAtNewline && c == _newline) return j;
+    // `source.length`를 돌려주고 [_scanStringLiteral]의 개행 경계에는 영영 닿지
+    // 않는다 — 무언가를 가두는 것이 존재 이유인 분기를 통과하는, 가둬지지 않은
+    // 질주다.
+    if (stopAtNewline && c == _newline) return (j, false);
     if (c == _openBrace) {
       depth++;
     } else if (c == _closeBrace) {
       depth--;
-      if (depth == 0) return j + 1;
+      if (depth == 0) return (j + 1, true);
     }
     j++;
   }
-  return source.length;
+  return (source.length, false);
 }
 
 /// 숫자 리터럴의 끝. 보수적으로 잡는다: 과하게 소비해도 문자 하나를 잘못
