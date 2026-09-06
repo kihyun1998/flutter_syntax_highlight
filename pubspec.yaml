@@ -14,6 +14,11 @@ topics:
   - text
   - widget
 
+# 예제를 같은 워크스페이스에 둔다. 루트에서 돌리는 `flutter analyze`가
+# example/까지 보게 하려는 것이다 — 따로 두면 예제가 깨져도 게이트가 조용하다.
+workspace:
+  - example
+
 environment:
   sdk: ">=3.6.0 <4.0.0"
   flutter: ">=3.27.0"
