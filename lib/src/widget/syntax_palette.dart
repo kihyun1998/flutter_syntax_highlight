@@ -62,6 +62,7 @@ part 'syntax_presets.dart';
 class SyntaxPalette {
   /// 주지 않은 kind는 null로 남아 루트 스타일을 물려받는다.
   const SyntaxPalette({
+    this.background,
     this.plain,
     this.comment,
     this.keyword,
@@ -77,6 +78,10 @@ class SyntaxPalette {
   /// 위 doc의 두 문단 — 색상을 더하지 않는다는 것과 주석을 흐리지 않는다는 것 —
   /// 이 여기 구현되어 있다.
   factory SyntaxPalette.fromColorScheme(ColorScheme scheme) => SyntaxPalette(
+        // **[background]를 주지 않는다.** 앱이 이미 칠해 둔 surface가 이
+        // 팔레트에게 올바른 배경이다 — `scheme.surface`를 여기서 다시 칠하면
+        // 같은 색을 한 겹 더 얹으면서, 앱이 코드 블록만 다른 surface 위에
+        // 올려 두는 자유를 뺏는다.
         // `plain`은 주지 않는다. 루트 스타일이 이미 평범한 코드가 가져야 할
         // 색이고, 토큰마다 객체 하나를 덜 만든다.
         comment: const TextStyle(fontStyle: FontStyle.italic),
@@ -113,12 +118,23 @@ class SyntaxPalette {
   //
   // 값과 출처는 `syntax_presets.dart`와 `NOTICES`에 있다.
   //
-  // 기본값은 이것들이 **아니다.** [SyntaxPalette.fromColorScheme]만이 라이트와
-  // 다크 양쪽에서 설정 없이 맞는다. 실명 프리셋은 정의상 하드코딩된 팔레트이고,
-  // 반대 밝기에서는 깨지는 정도가 아니라 **보이지 않는다** — 측정(2026-09-06):
-  // `cobalt2`의 본문 `#FFFFFF`는 흰 배경에서 명도비 **1.00**, `monokai`는 1.07,
-  // 라이트 프리셋 셋은 M3 다크 surface에서 1.60~1.70이다. 원본에 짝이 있으면
-  // 짝으로 싣는 이유가 그것이다.
+  // 각 프리셋은 [background]를 함께 들고 있고, 색들은 **그 배경 위에서** 고른
+  // 것이다. 측정(2026-09-07, 자기 배경 대비 본문 명도비): 4.13(solarizedLight)
+  // ~ 13.94(monokai), 열 개 전부 4.1 이상이다.
+  //
+  // 이 문단의 앞선 판본은 반대를 주장했다 — *"반대 밝기에서는 깨지는 정도가
+  // 아니라 보이지 않는다"*며 `cobalt2`의 본문 `#FFFFFF`가 명도비 **1.00**이라고
+  // 적었다. **그 수치는 지금도 맞고, 재는 대상이 틀렸다.** 1.00은 흰 본문을
+  // *앱의* 라이트 surface에 대고 잰 값이었다. 팔레트가 배경을 들고 있지 않아서
+  // 그것 말고는 잴 것이 없었고, 그 부재가 프리셋의 성질처럼 읽혔다. 자기 배경인
+  // `#193549`에 대고 재면 **12.75**다.
+  //
+  // 그래서 짝으로 싣는 이유도 바뀐다. 가독성이 아니라 **밝기 취향**이다 —
+  // 라이트 앱에 `oneDark`를 얹으면 읽기는 잘 읽히지만 코드 블록만 어둡다. 고를
+  // 것이 있어야 한다.
+  //
+  // 기본값은 여전히 이것들이 **아니다.** [SyntaxPalette.fromColorScheme]만이
+  // 앱의 surface를 그대로 배경으로 두어, 코드 블록이 앱에서 이물감이 없다.
   //
   // 이름으로 찾는 룩업은 두지 않는다. 프리셋을 고르게 하려는 소비자는 자기 목록을
   // 쓴다 — 그것이 레지스트리를 만들지 않기로 한 결정이다.
@@ -171,6 +187,19 @@ class SyntaxPalette {
   /// Cobalt2에서 **발췌**한 색. 재현이 아니다.
   static const cobalt2 = _cobalt2;
 
+  /// 코드 영역 뒤에 칠할 색. null이면 아무것도 칠하지 않는다.
+  ///
+  /// **kind가 아니다.** 나머지 여덟은 한 구간의 글자를 어떻게 그릴지를 정하고,
+  /// 이것은 그 글자들이 놓이는 자리를 정한다. 그래서 [styleFor]의 전수 `switch`에
+  /// 들어가지 않으며, 이 필드가 생긴 것은 [DartTokenKind]에 값을 더하는 것과
+  /// 달리 breaking change가 아니다.
+  ///
+  /// **파생 기본값은 이것을 주지 않는다.** [SyntaxPalette.fromColorScheme]에게
+  /// 올바른 배경은 앱이 이미 칠해 둔 surface이고, 그 위에 자기 색을 얹지 않는
+  /// 것이 곧 "색상을 더하지 않는다"의 내용이다. 실명 프리셋은 반대다 — 그 색들은
+  /// 특정한 배경 위에서 고른 것이라, 배경 없이 옮기면 원본이 정한 대비가 사라진다.
+  final Color? background;
+
   /// 식별자, 공백, 그리고 분류되지 않은 모든 것.
   final TextStyle? plain;
 
@@ -199,6 +228,7 @@ class SyntaxPalette {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SyntaxPalette &&
+          background == other.background &&
           plain == other.plain &&
           comment == other.comment &&
           keyword == other.keyword &&
@@ -210,6 +240,7 @@ class SyntaxPalette {
 
   @override
   int get hashCode => Object.hash(
+        background,
         plain,
         comment,
         keyword,

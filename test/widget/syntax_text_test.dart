@@ -214,6 +214,109 @@ void main() {
     });
   });
 
+  group('배경', () {
+    testWidgets('팔레트가 배경을 주면 그 색이 칠해진다', (tester) async {
+      const marker = Color(0xFF123456);
+      await pump(
+        tester,
+        const SyntaxText(
+          everyKind,
+          palette: SyntaxPalette(
+            background: marker,
+            plain: TextStyle(color: Color(0xFFEEEEEE)),
+          ),
+        ),
+      );
+
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is ColoredBox && w.color == marker,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('배경을 주지 않으면 아무것도 칠하지 않는다', (tester) async {
+      // 그때 뒤에 있는 것은 앱의 surface다. 여기서 무엇이든 칠하면 파생 기본값이
+      // "색상을 더하지 않는다"는 결정을 어긴다.
+      await pump(tester, const SyntaxText(everyKind));
+
+      final painted = tester.widgetList<ColoredBox>(find.descendant(
+        of: find.byType(SyntaxText),
+        matching: find.byType(ColoredBox),
+      ));
+      expect(painted, isEmpty);
+    });
+
+    testWidgets('배경이 스크롤 뷰보다 바깥이라 pane 전체를 덮는다', (tester) async {
+      // 안쪽에 두면 스크롤되는 내용의 크기만큼만 칠해져, 코드보다 넓은 pane에서
+      // 칠하지 않은 띠가 남는다. 코드는 한 줄인데 pane은 400×300이다.
+      const marker = Color(0xFF123456);
+      await pump(
+        tester,
+        const SyntaxText(
+          'var x = 1;',
+          palette: SyntaxPalette(
+            background: marker,
+            plain: TextStyle(color: Color(0xFFEEEEEE)),
+          ),
+        ),
+      );
+
+      final box = tester.getSize(
+        find.byWidgetPredicate((w) => w is ColoredBox && w.color == marker),
+      );
+      expect(box, const Size(400, 300));
+    });
+
+    testWidgets('scrollable: false면 배경도 세로로 같이 줄어든다', (tester) async {
+      // 글 안의 코드 블록으로 쓰는 경우다. 배경이 pane 높이를 채워 버리면 그
+      // 용도가 사라진다 — 위 검사와 반대 방향이고, 둘 다 필요하다.
+      const marker = Color(0xFF123456);
+      await pump(
+        tester,
+        const Align(
+          alignment: Alignment.topLeft,
+          child: SyntaxText(
+            'var x = 1;',
+            scrollable: false,
+            palette: SyntaxPalette(
+              background: marker,
+              plain: TextStyle(color: Color(0xFFEEEEEE)),
+            ),
+          ),
+        ),
+      );
+
+      final box = tester.getSize(
+        find.byWidgetPredicate((w) => w is ColoredBox && w.color == marker),
+      );
+      expect(box.height, lessThan(300));
+      expect(box.height, greaterThan(0));
+    });
+
+    testWidgets('복사 아이콘이 앱 테마가 아니라 팔레트를 따라간다', (tester) async {
+      // 앱 테마의 `onSurfaceVariant`는 **앱의 surface에 대고** 고른 색이라, 남의
+      // 배경 위에서는 아무것도 보장하지 않는다. 라이트 앱 + 어두운 프리셋이
+      // 정확히 그 경우다.
+      const dim = Color(0xFF7F848E);
+      await pump(
+        tester,
+        const SyntaxText(
+          everyKind,
+          palette: SyntaxPalette(
+            background: Color(0xFF282C34),
+            plain: TextStyle(color: Color(0xFFABB2BF)),
+            comment: TextStyle(color: dim),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.color, dim);
+    });
+  });
+
   group('스크롤', () {
     testWidgets('가로는 항상 위젯이 소유한다', (tester) async {
       await pump(tester, const SyntaxText(everyKind, scrollable: false));

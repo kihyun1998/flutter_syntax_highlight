@@ -7,7 +7,8 @@ thing: keep the notice. This file is that notice.
 The presets are an **excerpt, not a reproduction.** The originals assign colours
 to dozens or hundreds of TextMate scopes; this package has eight token kinds, so
 each preset carries the colours the original gave to the scopes matching those
-eight. They do not look identical to the original editor.
+eight, plus the background those colours were chosen against. They do not look
+identical to the original editor.
 
 No logo or wordmark of any project below is used, no theme name appears in this
 package's own name, and this package is not affiliated with, endorsed by, or
@@ -76,6 +77,24 @@ Cobalt2         Copyright (c) 2018 Wes Bos, Roberto Achar (MIT)
     cobalt2         github.com/wesbos/cobalt2-vscode
                     @ c4e9574372b85afad1682ed0fdd1ac0411c62512
                       theme/cobalt2.json
+
+---
+
+Backgrounds. Each preset also carries the editor background the original pairs
+its foreground colours with, read from the same file and the same commit listed
+above. The key is `editor.background` for every VS Code theme; for the two Atom
+themes it is the less variable `@syntax-bg`, whose HSL is evaluated here the way
+the foreground colours already were.
+
+    solarizedDark    #002B36    solarizedLight    #FDF6E3
+    oneDark          #282C34    oneLight          #FAFAFA
+    monokai          #272822
+    gruvboxDark      #282828    gruvboxLight      #FBF1C7
+    tokyoNight       #1A1B26    tokyoNightLight   #E6E7ED
+    cobalt2          #193549
+
+    oneDark   @syntax-bg = hsl(220, 13%, 18%)
+    oneLight  @syntax-bg = hsl(230,  1%, 98%)
 
 ---
 

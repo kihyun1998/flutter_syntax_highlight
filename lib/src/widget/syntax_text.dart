@@ -64,6 +64,10 @@ import 'syntax_palette.dart';
 /// 스타일을 주지 않으면 평범한 코드는 그 색으로 그려진다 — 파생 기본값이 실제로
 /// 그렇고, 색이 있는 팔레트를 넘기면서 `plain`을 비워 두면 앱 테마의 색이 남는다.
 ///
+/// **[SyntaxPalette.background]를 주는 팔레트는 `plain`도 같이 줘야 한다.** 그때
+/// 남는 앱 테마의 색은 앱의 surface에 대고 고른 것이고, 이제 뒤에 있는 것은 그
+/// surface가 아니다. 실린 프리셋 열 개는 전부 둘 다 준다.
+///
 /// ## 줄 번호는 없다
 ///
 /// 이 위젯은 붙여넣을 수 있는 조각을 보이는 것이지 소스 뷰어가 아니다. 그리고 그
@@ -267,26 +271,59 @@ class _SyntaxTextState extends State<SyntaxText> {
       );
     }
 
-    if (!widget.copyable) return code;
+    final background = palette.background;
 
-    return Stack(
-      children: [
-        code,
-        Positioned(
-          top: 4,
-          right: 4,
-          child: IconButton(
-            tooltip: _copied ? widget.copiedTooltip : widget.copyTooltip,
-            iconSize: 17,
-            visualDensity: VisualDensity.compact,
-            onPressed: _copy,
-            icon: Icon(
-              _copied ? Icons.check : Icons.copy_all_outlined,
-              color: _copied ? scheme.onSurface : scheme.onSurfaceVariant,
+    // 배경이 칠해지면 이 위젯 자신의 컨트롤도 팔레트를 따라야 한다. 앱 테마의
+    // `onSurfaceVariant`는 **앱의 surface에 대고** 고른 색이라, 남의 배경 위에서는
+    // 아무것도 보장하지 않는다 — 라이트 앱에 어두운 프리셋을 얹으면 복사 버튼과
+    // 스크롤바가 그 배경에 묻힌다. 배경을 준 팔레트는 전경색도 함께 주므로,
+    // 그것에서 가져온다.
+    final chrome = background == null
+        ? scheme.onSurfaceVariant
+        : palette.comment?.color ??
+            palette.plain?.color ??
+            scheme.onSurfaceVariant;
+    final chromeStrong =
+        background == null ? scheme.onSurface : palette.plain?.color ?? chrome;
+
+    if (widget.copyable) {
+      code = Stack(
+        children: [
+          code,
+          Positioned(
+            top: 4,
+            right: 4,
+            child: IconButton(
+              tooltip: _copied ? widget.copiedTooltip : widget.copyTooltip,
+              iconSize: 17,
+              visualDensity: VisualDensity.compact,
+              onPressed: _copy,
+              icon: Icon(
+                _copied ? Icons.check : Icons.copy_all_outlined,
+                color: _copied ? chromeStrong : chrome,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      );
+    }
+
+    if (background == null) return code;
+
+    // **[Stack]보다 바깥이다.** [Stack]의 기본 `fit`은 loose라, 안에 두면 배경이
+    // 코드 내용의 크기로 쪼그라들어 코드보다 넓은 pane에 칠하지 않은 자리가
+    // 남는다. 여기서는 부모의 제약을 그대로 받는다 — 제약이 빡빡하면 pane을
+    // 채우고, `scrollable: false`로 세로가 shrink-wrap이면 배경도 같이 줄어든다.
+    // (그 두 경우가 각각 테스트에 있다.)
+    code = ColoredBox(color: background, child: code);
+
+    // 스크롤바는 터치에서 유일한 가로 어포던스다. 이 위젯의 doc이 그렇게 적어
+    // 두었으므로, 배경을 바꾸면서 그것을 배경에 묻히게 둘 수 없다.
+    return ScrollbarTheme(
+      data: ScrollbarThemeData(
+        thumbColor: WidgetStatePropertyAll(chrome.withAlpha(115)),
+      ),
+      child: code,
     );
   }
 }

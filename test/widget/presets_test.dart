@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
@@ -85,6 +86,59 @@ void main() {
     });
   });
 
+  group('배경', () {
+    test('열 개가 전부 자기 배경을 든다', () {
+      for (final e in presets.entries) {
+        expect(
+          e.value.background,
+          isNotNull,
+          reason: '${e.key}에 배경이 없다 — 색들은 특정 배경 위에서 고른 것이라, '
+              '배경 없이 실으면 원본이 정한 대비가 사라진다',
+        );
+      }
+    });
+
+    test('파생 기본값은 배경을 주지 않는다', () {
+      // 앱이 이미 칠해 둔 surface가 이 팔레트에게 올바른 배경이다. 여기서
+      // 무엇이든 칠하면 코드 블록만 앱에서 떨어져 나온다.
+      final derived = SyntaxPalette.fromColorScheme(
+        ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+      );
+      expect(derived.background, isNull);
+    });
+
+    test('본문이 자기 배경 위에서 4.1:1 이상이다', () {
+      // **이 검사가 문서의 주장을 대체한다.** 앞선 판본은 프리셋이 "반대
+      // 밝기에서 보이지 않는다"고 적으면서 `cobalt2`의 명도비를 1.00이라고
+      // 했는데, 그것은 흰 본문을 *앱의* surface에 대고 잰 값이었다 — 팔레트가
+      // 배경을 들고 있지 않아 그것 말고는 잴 것이 없었기 때문이다.
+      //
+      // 바닥을 4.1로 둔 것은 WCAG AA(4.5)가 아니라 **실측된 최솟값 바로
+      // 아래**다: solarizedLight가 4.13이고, 그 값은 상류가 정한 것이라 우리가
+      // 올릴 수 없다. AA를 요구하면 통과시킬 수 없는 것을 요구하게 되고, 더
+      // 낮추면 상류가 값을 바꿔도 조용해진다.
+      for (final e in presets.entries) {
+        final ratio = _contrast(e.value.background!, e.value.plain!.color!);
+        expect(
+          ratio,
+          greaterThan(4.1),
+          reason: '${e.key}: 본문이 자기 배경 위에서 '
+              '${ratio.toStringAsFixed(2)}:1이다',
+        );
+      }
+    });
+
+    test('cobalt2는 앱 surface가 아니라 자기 배경 위에서 읽힌다', () {
+      // 위 검사가 열 개를 한꺼번에 도는 동안, 이 하나는 **바뀐 것이 무엇인지**를
+      // 이름 대고 남긴다. 같은 흰 본문, 두 개의 배경.
+      const white = Color(0xFFFFFFFF);
+      expect(SyntaxPalette.cobalt2.plain!.color, white);
+      expect(_contrast(const Color(0xFFFDF7FF), white), lessThan(1.1));
+      expect(_contrast(SyntaxPalette.cobalt2.background!, white),
+          greaterThan(12.0));
+    });
+  });
+
   group('조사가 기록한 값과 어긋나지 않는다', () {
     test('escape가 number와 같은 것은 정확히 넷이다', () {
       // 조사(#9)가 센 것: `constant.character.escape`에 전용 규칙이 있는 테마는
@@ -164,6 +218,19 @@ void main() {
           reason: '커밋으로 고정된 출처가 줄었다');
     });
 
+    test('배경값도 출처와 함께 적혀 있다', () {
+      // 배경은 나중에 붙었고, 그래서 고지에서 빠지기 가장 쉬운 값이다.
+      for (final e in presets.entries) {
+        final hex =
+            e.value.background!.toARGB32().toRadixString(16).substring(2);
+        expect(
+          notices.toUpperCase(),
+          contains('#${hex.toUpperCase()}'),
+          reason: '${e.key}의 배경 #$hex가 NOTICES에 없다',
+        );
+      }
+    });
+
     test('배포물에 실린다', () {
       // `.pubignore`가 `.gitignore`를 대체하므로, 여기 적히지 않은 것은 빠지는
       // 것이 아니라 **들어간다**. 반대로 실수로 뺄 수도 있다.
@@ -171,4 +238,19 @@ void main() {
       expect(ignore, isNot(contains('NOTICES')));
     });
   });
+}
+
+/// WCAG 상대 명도 대비.
+double _contrast(Color a, Color b) {
+  final la = _luminance(a);
+  final lb = _luminance(b);
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+double _luminance(Color c) {
+  double channel(double v) =>
+      v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4).toDouble();
+  return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
 }
