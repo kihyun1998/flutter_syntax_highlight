@@ -29,4 +29,19 @@ dev_dependencies:
   # 만든다. ^5.0.0은 ^3.5.0을 요구해 하한과 맞고, 참조 repo가 쓰는 것과도 같다.
   flutter_lints: ^5.0.0
 
-flutter:
+# `flutter:` 절은 두지 않는다. asset도 font도 없어서 빈 키만 남고, 빈 키는
+# 뭔가 있다가 지워진 것처럼 읽힌다.
+
+screenshots:
+  - description: >-
+      The example app in light mode, drawing Dart with the default palette
+      derived from the app's ColorScheme.
+    path: screenshots/light.png
+  - description: >-
+      The same screen in dark mode. The default palette is derived, so it is
+      right in both with nothing to configure.
+    path: screenshots/dark.png
+  - description: >-
+      The oneDark preset in a light app. A named preset carries the background
+      its colours were chosen against.
+    path: screenshots/preset-one-dark.png
