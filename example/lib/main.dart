@@ -97,6 +97,11 @@ class _ExampleAppState extends State<ExampleApp> {
           ],
         ),
         body: Column(
+          // 기본값 `center`는 `Expanded`가 늘리는 세로만 두고 가로로는 코드
+          // 블록을 자기 텍스트 폭으로 쪼그라뜨려 가운데 세운다. 코드 뷰어는
+          // pane을 채워야 하고, 채우지 않으면 가로 스크롤이 화면에 나타나지도
+          // 않는다 — 스크린샷을 찍다가 잡았다.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
