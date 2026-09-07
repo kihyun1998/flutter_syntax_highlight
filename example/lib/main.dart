@@ -53,6 +53,32 @@ const palettes = <String, SyntaxPalette?>{
   'cobalt2': SyntaxPalette.cobalt2,
 };
 
+/// 고를 수 있는 시드.
+///
+/// **파생 기본값이 앱의 스킴에서 나온다는 주장을 실연하는 장치다.** 문장으로만
+/// 하던 주장을 시드를 바꿔 눈으로 보인다 — 문자열과 호출 이름의 색이 스킴을
+/// 따라 같이 움직인다.
+///
+/// 마지막 항목이 요점이다: 무채색 스킴에서는 **팔레트도 무채색이 된다.** 이
+/// 패키지는 앱의 색상을 빌릴 뿐 자기 색상을 도입하지 않으므로, 빌릴 것이 없으면
+/// 아무 색도 나오지 않는다.
+class Seed {
+  const Seed(this.label, this.colour,
+      {this.variant = DynamicSchemeVariant.tonalSpot});
+
+  final String label;
+  final Color colour;
+  final DynamicSchemeVariant variant;
+}
+
+const seeds = <Seed>[
+  Seed('보라', Color(0xFF6750A4)),
+  Seed('청록', Color(0xFF006B5F)),
+  Seed('주황', Color(0xFFB3541E)),
+  Seed('파랑', Color(0xFF0B57D0)),
+  Seed('무채색', Color(0xFF5A5A5A), variant: DynamicSchemeVariant.monochrome),
+];
+
 class ExampleApp extends StatefulWidget {
   const ExampleApp({super.key});
 
@@ -62,6 +88,7 @@ class ExampleApp extends StatefulWidget {
 
 class _ExampleAppState extends State<ExampleApp> {
   var _brightness = Brightness.light;
+  var _seed = seeds.first;
   var _palette = palettes.keys.first;
 
   @override
@@ -72,14 +99,29 @@ class _ExampleAppState extends State<ExampleApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6750A4),
+          seedColor: _seed.colour,
           brightness: _brightness,
+          dynamicSchemeVariant: _seed.variant,
         ),
       ),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('flutter_syntax_highlight'),
           actions: [
+            // 시드 스와치. 파생 기본값이 앱의 스킴에서 나온다는 것을 눈으로
+            // 보이는 장치이고, 마지막 칸(무채색)이 "자기 색상을 도입하지
+            // 않는다"를 보인다 — 빌릴 색이 없으면 아무 색도 안 나온다.
+            for (final seed in seeds)
+              IconButton(
+                tooltip: seed.label,
+                onPressed: () => setState(() => _seed = seed),
+                icon: Icon(
+                  seed == _seed ? Icons.circle : Icons.circle_outlined,
+                  color: seed.colour,
+                  size: 18,
+                ),
+              ),
+            const SizedBox(width: 8),
             // 밝기 토글. 파생 기본값이 양쪽에서 맞다는 주장을 눈으로 보이는
             // 장치이고, 실명 프리셋이 반대 밝기에서 보이지 않게 되는 것도 같이
             // 보인다.

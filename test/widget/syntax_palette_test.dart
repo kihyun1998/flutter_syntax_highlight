@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,9 +15,11 @@ final monochrome = ColorScheme.fromSeed(
 
 void main() {
   group('fromColorScheme — 설정 없이 라이트와 다크 양쪽에서 맞는 기본값', () {
-    test('여덟 kind 전부를 다루고, 둘만 루트를 물려받는다', () {
+    test('여덟 kind 전부를 다루고, plain만 루트를 물려받는다', () {
+      // `function`도 여기 있었다. 줄 축이 없다는 것이 이유였고 ADR-0003이 그
+      // 이유를 지웠다 — 앱의 accent를 희석해 빌리는 축이 있다.
       final palette = SyntaxPalette.fromColorScheme(colourful);
-      final inherits = {DartTokenKind.plain, DartTokenKind.function};
+      final inherits = {DartTokenKind.plain};
       for (final kind in DartTokenKind.values) {
         expect(
           palette.styleFor(kind),
@@ -49,25 +53,50 @@ void main() {
       // 없었다**는 것이었다. 소비자의 스킴은 색이 있을 수 있으므로 그 문장은
       // 그대로 옮기면 거짓이 된다.
       //
-      // 다시 쓴 주장은 더 보편적이다: 이 팔레트는 스킴의 세 역할만 읽고 자기
-      // 색상을 도입하지 않는다. 앱이 무채색이면 무채색이 되고, 색이 있으면
-      // 그 색에 섞인다.
-      for (final scheme in [colourful, monochrome]) {
-        final palette = SyntaxPalette.fromColorScheme(scheme);
-        final allowed = {
-          scheme.onSurface,
-          scheme.onSurfaceVariant,
-          scheme.outline,
-        };
-        for (final kind in DartTokenKind.values) {
-          final colour = palette.styleFor(kind)?.color;
-          if (colour == null) continue;
+      // 주장은 "세 역할의 값만 쓴다"가 아니라 **"자기 색상을 도입하지
+      // 않는다"**다. ADR-0003이 앞의 형태를 뒤집었고 뒤의 형태는 그대로다.
+      // 그래서 두 방향으로 잰다.
+
+      // (가) 앱이 무채색이면 팔레트도 무채색이다. 색을 들여왔다면 여기서 샌다.
+      final grey = SyntaxPalette.fromColorScheme(monochrome);
+      for (final kind in DartTokenKind.values) {
+        final colour = grey.styleFor(kind)?.color;
+        if (colour == null) continue;
+        expect(colour.r, closeTo(colour.g, 0.02), reason: '$kind');
+        expect(colour.g, closeTo(colour.b, 0.02), reason: '$kind');
+      }
+
+      // (나) 색이 있는 스킴에서는, 당긴 색이 **앵커와 목적지 사이**에 있다.
+      // 값을 못 박는 대신 이렇게 두는 이유는 희석 계수가 측정으로 정해지고
+      // 다시 측정될 수 있기 때문이다 — 계수가 바뀌어도 이 성질은 남아야 하고,
+      // 임의의 색을 넣으면 계수와 무관하게 여기서 걸린다.
+      final palette = SyntaxPalette.fromColorScheme(colourful);
+      void between(Color got, Color anchor, Color target, String what) {
+        for (final read in <double Function(Color)>[
+          (c) => c.r,
+          (c) => c.g,
+          (c) => c.b,
+        ]) {
+          final lo = min(read(anchor), read(target));
+          final hi = max(read(anchor), read(target));
           expect(
-            allowed,
-            contains(colour),
-            reason: '$kind가 스킴에 없는 색을 들여왔다',
+            read(got),
+            inInclusiveRange(lo - 0.01, hi + 0.01),
+            reason: '$what이 앵커와 목적지 사이를 벗어났다',
           );
         }
+      }
+
+      between(palette.string!.color!, colourful.onSurfaceVariant,
+          colourful.tertiary, 'string');
+      between(palette.function!.color!, colourful.onSurface, colourful.primary,
+          'function');
+      for (final kind in [DartTokenKind.number, DartTokenKind.punctuation]) {
+        expect(
+          {colourful.onSurfaceVariant, colourful.outline},
+          contains(palette.styleFor(kind)!.color),
+          reason: '$kind는 당기지 않는 kind다',
+        );
       }
     });
 
@@ -91,13 +120,22 @@ void main() {
     });
 
     test('물러나는 것은 punctuation이다', () {
+      // 문자열이 색상을 얻은 뒤에도 순서는 그대로여야 한다: 구두점이 제일 뒤로
+      // 물러나 있고, 리터럴은 그보다 앞이다. 값을 비교하면 희석 계수가 바뀔
+      // 때마다 깨지므로, **순서**를 잰다.
       final palette = SyntaxPalette.fromColorScheme(colourful);
-      expect(palette.styleFor(DartTokenKind.punctuation)!.color,
-          colourful.outline);
       expect(
-        palette.styleFor(DartTokenKind.string)!.color,
-        colourful.onSurfaceVariant,
-        reason: 'punctuation은 문자열보다 한 단계 더 흐려야 한다',
+        palette.styleFor(DartTokenKind.punctuation)!.color,
+        colourful.outline,
+      );
+
+      double gap(Color c) =>
+          (c.computeLuminance() - colourful.surface.computeLuminance()).abs();
+
+      expect(
+        gap(palette.styleFor(DartTokenKind.punctuation)!.color!),
+        lessThan(gap(palette.styleFor(DartTokenKind.string)!.color!)),
+        reason: 'punctuation은 문자열보다 한 단계 더 물러나야 한다',
       );
     });
 
@@ -115,14 +153,25 @@ void main() {
       );
     });
 
-    test('리터럴의 내용물 셋은 같은 자리에서 흐려진다', () {
-      // `string` / `number` / `escape`는 같은 역할을 읽는다. 셋 다 리터럴의
-      // 내용물이고, 색상 없이 셋을 더 가를 축이 남아 있지 않다.
+    test('escape는 리터럴을 따라가고, number는 일부러 남는다', () {
+      // 셋이 같은 자리에 있었다. ADR-0003이 `string`을 당기면서 갈라졌고,
+      // 그 갈라짐의 방향이 결정이다.
       //
-      // 값을 못 박지 않으면 셋 중 하나만 `outline`으로 옮기는 변형이 통과한다 —
-      // 그러면 문자열 안의 escape가 구두점과 같은 밝기가 되어, 리터럴이 중간에서
-      // 꺼진 것처럼 보인다.
+      // `escape`는 **따라간다** — 자기 리터럴의 일부이고, 프리셋 조사(#9)에서
+      // 열 중 넷이 escape를 number와 같은 색으로 칠했다.
+      // `number`는 **남는다** — 그래야 문자열과 숫자 사이에 없던 구분이 생긴다.
       final palette = SyntaxPalette.fromColorScheme(colourful);
+
+      expect(palette.escape, palette.string, reason: 'escape가 리터럴에서 떨어졌다');
+      expect(
+        palette.number!.color,
+        colourful.onSurfaceVariant,
+        reason: 'number까지 같이 옮기면 서로에 대해서는 제자리다',
+      );
+      expect(palette.number!.color, isNot(palette.string!.color));
+
+      // 셋 중 무엇도 구두점 자리로 내려가지 않는다. 내려가면 리터럴이 중간에서
+      // 꺼진 것처럼 보인다.
       for (final kind in [
         DartTokenKind.string,
         DartTokenKind.number,
@@ -130,7 +179,7 @@ void main() {
       ]) {
         expect(
           palette.styleFor(kind)!.color,
-          colourful.onSurfaceVariant,
+          isNot(colourful.outline),
           reason: '$kind',
         );
       }

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.0
+
+The palette derived from your `ColorScheme` now borrows your app's accent, in
+two places, diluted. Nothing else changed; the tokenizer is untouched.
+
+- `string` (and `escape`, which follows its literal) is pulled from
+  `onSurfaceVariant` towards `tertiary`; `function`, which had no style at all,
+  is pulled from `onSurface` towards `primary`. `number` and `punctuation` stay
+  where they were, so the literals gain a distinction between them.
+- It still introduces no hue of its own — every colour is a neutral role from
+  your scheme or a neutral role mixed with one of your scheme's accents, and a
+  monochrome scheme still yields a monochrome palette.
+- How far to pull was measured over the whole hue circle in both brightnesses,
+  against two scales this palette already contained. See
+  `docs/adr/0003-the-derived-default-borrows-the-app-s-accent-diluted.md`.
+- The example gained a seed picker, so the derivation is visible rather than
+  merely claimed.
+
+Named presets are unchanged. If you pass one, or your own `SyntaxPalette`,
+nothing about this release affects you.
+
 ## 0.1.0
 
 First release.

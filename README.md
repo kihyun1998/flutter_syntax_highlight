@@ -15,7 +15,7 @@ On the `return` line, inside `'${value ? '✓' : '✗'}'`: the nested `'✓'` an
 
 ```yaml
 dependencies:
-  flutter_syntax_highlight: ^0.1.0
+  flutter_syntax_highlight: ^0.2.0
 ```
 
 ```dart
@@ -124,10 +124,16 @@ The same scanner covers the boundaries that are easy to run past:
 
 ### The default is derived from your `ColorScheme`
 
-Pass no palette and `SyntaxPalette.fromColorScheme` is used. It reads
-`onSurface`, `onSurfaceVariant` and `outline` and **introduces no hue of its
-own**, so the code block takes your app's colour rather than adding one — and
-because it is derived, it is right in light and dark with nothing to configure.
+Pass no palette and `SyntaxPalette.fromColorScheme` is used. It **introduces no
+hue of its own**: every colour is a neutral role from your scheme, or a neutral
+role pulled part-way towards your `primary` or `tertiary`. Your app's colour
+comes through, this package's does not — a monochrome scheme yields a
+monochrome palette. And because it is derived, it is right in light and dark
+with nothing to configure.
+
+How far it pulls was measured rather than eyeballed, over the whole hue circle
+in both brightnesses
+([ADR-0003](https://github.com/kihyun1998/flutter_syntax_highlight/blob/main/docs/adr/0003-the-derived-default-borrows-the-app-s-accent-diluted.md)).
 
 ### Writing your own is a constructor call
 

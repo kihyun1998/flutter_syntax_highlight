@@ -73,6 +73,30 @@ class SyntaxPalette {
     this.function,
   });
 
+  /// 파생 기본값이 앱의 accent 쪽으로 당기는 정도.
+  ///
+  /// **앵커는 언제나 중성 역할이고**, 이 값은 거기서 얼마나 벗어나는지다. 1.0은
+  /// 앱의 `primary`/`tertiary`를 그대로 쓰는 것이고, 그러면 코드 블록이 앱의
+  /// 강조색을 통째로 입어 조용하려던 팔레트가 시끄러워진다.
+  ///
+  /// **0.70은 측정으로 골랐다** (2026-09-07, `fromSeed`를 색상환 12방향 ×
+  /// 라이트·다크로 스윕). 눈금 둘이 이 저장소 안에 이미 있었다 — 같은 스윕에서
+  /// `onSurfaceVariant`와 `onSurface`의 차이가 **ΔE 9.9**이고 그것은
+  /// 스크린샷에서 거의 보이지 않았다. `outline`과 `onSurface`는 **29.9**이고
+  /// 그것은 확실히 보인다. 0.70에서 새로 생기는 구분들은 전부 그 사이에
+  /// 들어온다: string↔plain 15.4, string↔number 11.4, function↔plain 17.4,
+  /// function↔string 15.9.
+  ///
+  /// **명도비는 제약이 아니었다.** `t = 1.0`에서도 surface 대비 최악이 6.1이고,
+  /// 이 팔레트가 이미 싣고 있는 `outline`이 4.23이다 — M3의 `fromSeed`가
+  /// `primary`/`tertiary`를 고정 톤으로 매핑해 애초에 읽히게 만든다. 처음에는
+  /// 대비가 상한을 정할 것이라고 예상했고, 그것은 틀렸다.
+  static const _accentMix = 0.7;
+
+  /// [anchor]에서 [accent] 쪽으로 [_accentMix]만큼 간 색의 스타일.
+  static TextStyle _towards(Color anchor, Color accent) =>
+      TextStyle(color: Color.lerp(anchor, accent, _accentMix));
+
   /// 소비자의 [ColorScheme]에서 파생된 기본 팔레트.
   ///
   /// 위 doc의 두 문단 — 색상을 더하지 않는다는 것과 주석을 흐리지 않는다는 것 —
@@ -86,26 +110,21 @@ class SyntaxPalette {
         // 색이고, 토큰마다 객체 하나를 덜 만든다.
         comment: const TextStyle(fontStyle: FontStyle.italic),
         keyword: const TextStyle(fontWeight: FontWeight.w600),
-        string: TextStyle(color: scheme.onSurfaceVariant),
+        // 흐린 데서 출발해 앱의 `tertiary` 쪽으로 [_accentMix]만큼 당긴다.
+        // 흐림은 남고 색상이 더해진다 — 리터럴이 본문보다 물러나 있다는 성질은
+        // 그대로고, 그 위에 구분이 하나 얹힌다.
+        string: _towards(scheme.onSurfaceVariant, scheme.tertiary),
+        // **`number`는 당기지 않는다.** 그래야 `string`이 움직이면서 문자열과
+        // 숫자 사이에 없던 구분이 생긴다(측정: ΔE 11.4). 리터럴 셋을 다 같이
+        // 옮기면 서로에 대해서는 제자리다.
         number: TextStyle(color: scheme.onSurfaceVariant),
-        // 문자열과 **같게** 그린다. 조사한 테마 9종은 전부 escape에 다른 색을
-        // 주지만, 그것들에는 색상이 있다. 여기 남은 축은 밝기·굵기·기울임 셋뿐이고
-        // 이미 다 쓰였으므로, 줄 수 있는 것이 없다.
-        //
-        // 그래서 escape는 자기 리터럴과 함께 그려진다 — 그것의 일부이기도 하다.
-        // 프리셋 조사(#9)에서 열 중 넷이 escape를 number와 같은 색으로 칠하는
-        // 것을 보면, 항상 구분하는 것이 보편적인 선택도 아니다. 다만 그것은
-        // 근거가 아니라 곁증거다. 근거는 이 팔레트에 남은 축이 없다는 것이다.
-        escape: TextStyle(color: scheme.onSurfaceVariant),
-        // **`function`은 주지 않는다.** 조사한 테마 9/9가 호출 이름을 다르게
-        // 칠하지만 그것들에는 색상이 있다. 여기서 남은 축은 밝기·굵기·기울임
-        // 셋뿐이고 이미 다 쓰였다 — 굵기는 keyword, 기울임은 comment, 흐림은
-        // 문자열과 punctuation. 세 번째 굵기를 얹으면 조용하려고 만든 팔레트가
-        // 시끄러워지고, `onSurface`를 주면 루트와 같은 색이라 아무 구분도 되지
-        // 않는다.
-        //
-        // 그래서 파생 기본값은 호출을 구분하지 않는다. kind는 남아 있고, 색이
-        // 있는 실명 프리셋이 그것을 쓴다.
+        // escape는 자기 리터럴과 **함께** 그려진다 — 그것의 일부이기도 하고,
+        // 프리셋 조사(#9)에서 열 중 넷이 escape를 number와 같은 색으로 칠했다.
+        // 그러므로 [string]과 같은 값을 쓴다.
+        escape: _towards(scheme.onSurfaceVariant, scheme.tertiary),
+        // 본문에서 출발해 앱의 `primary` 쪽으로 당긴다. 조사한 테마 **9/9**가
+        // 호출 이름을 다르게 칠하는데 이 팔레트만 비워 두고 있었다.
+        function: _towards(scheme.onSurface, scheme.primary),
         punctuation: TextStyle(color: scheme.outline),
       );
 

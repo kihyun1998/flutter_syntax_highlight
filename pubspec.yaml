@@ -2,7 +2,7 @@ name: flutter_syntax_highlight
 description: >-
   Dart-only syntax highlighting in two layers: a pure-Dart tokenizer underneath
   and a thin widget on top. The tokens rejoin into the exact input, byte for byte.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/kihyun1998/flutter_syntax_highlight
 repository: https://github.com/kihyun1998/flutter_syntax_highlight
 issue_tracker: https://github.com/kihyun1998/flutter_syntax_highlight/issues
