@@ -100,18 +100,32 @@ the foreground colours already were.
 
 Themes deliberately not included, and why.
 
-**The trademark registration numbers below have not been verified at
-tsdr.uspto.gov.** They come from trademark-database searches recorded in this
-project's issue tracker; TSDR itself could not be read (the page is JavaScript
-gated and its API requires a key). Read them as the reason a name was set aside
-pending verification, not as findings of fact.
+**None of the registration numbers below were read at tsdr.uspto.gov.** That
+source stayed closed on every attempt: the page is JavaScript gated and the API
+now answers HTTP 401, asking for a key. What is recorded here is second-hand —
+searches, and where noted a cross-check against public mirrors of the USPTO
+record. Read these as the reason a name was set aside, not as findings of fact.
+
+One of them was corroborated. **ATOM, US Reg. 4,819,136** — the reason this
+package's constructor is `oneDark` and not `atomOneDark` — matches on two
+independent mirrors: serial 86315816, owner GitHub, Inc., registered
+2015-09-22, International Class 009, goods "Downloadable computer software for
+use in developing and editing computer software." That description covers code
+editors directly. Still a mirror, not the register itself.
 
     Dracula         Search reports US Reg. 6,306,339 (Zeno Rocha) naming
                     "syntax highlighters" among its goods. MIT conveys no
                     trademark rights.
-    Nord            Search reports US Reg. 7,458,940 (NordSec B.V.) covering
-                    downloadable software and software development. Its licence
-                    was clean; the name is the only reason it is absent.
+    Nord            Search reported US Reg. 7,458,940 (NordSec B.V.). That
+                    number could not be corroborated on any mirror. What does
+                    appear is a NORD mark held by NordSec (serial 88768969) in
+                    security-software goods, and several sibling marks
+                    (NORDVPN, NORDPASS, NORDSEC). Nord's licence was clean —
+                    MIT, (c) 2016-present Sven Greb, read directly — and the
+                    name is the only reason it is absent. Failing to find a
+                    registration is not evidence there is none, so the
+                    conservative side of the open question is the one taken:
+                    Nord stays out.
     GitHub Dark/Light   GITHUB is a live mark and GitHub's brand policy
                     restricts name use separately from the MIT licence.
     Everforest      Search reports US Reg. 7,762,715 and EUIPO 018641989.
@@ -119,5 +133,5 @@ pending verification, not as findings of fact.
                     This one is a licence term, read directly, not a search.
 
 The licence findings above are a record of reading each project's LICENSE file.
-The trademark lines are a record of database searches, unverified as noted.
-Neither is legal advice.
+The trademark lines are a record of database searches, one of them cross-checked
+against mirrors and the rest not. Neither is legal advice.

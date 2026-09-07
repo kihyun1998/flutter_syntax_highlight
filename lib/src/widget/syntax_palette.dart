@@ -149,7 +149,13 @@ class SyntaxPalette {
   /// One Dark에서 **발췌**한 색. 재현이 아니다.
   ///
   /// 이름이 `atomOneDark`가 아닌 것은 `ATOM`이 GitHub의 상표이기 때문이다. 값은
-  /// `atom/one-dark-syntax`에서 왔고 그 파일의 라이선스는 MIT다.
+  /// `atom/one-dark-syntax`에서 왔고 그 파일의 라이선스는 MIT다 — **라이선스와
+  /// 상표는 다른 축이고, MIT는 상표권을 넘기지 않는다.**
+  ///
+  /// 그 상표 판정은 2026-09-07에 교차 확인했다: US Reg. 4,819,136, GitHub, Inc.,
+  /// Class 009의 지정상품이 *"소프트웨어를 개발하고 편집하는 다운로드 가능
+  /// 소프트웨어"*다 — 코드 에디터를 곧바로 덮는다. 다만 **원본 대장이 아니라
+  /// 공개 미러 둘이다.** `NOTICES`가 그 단서를 들고 있다.
   static const oneDark = _oneDark;
 
   /// One Light에서 **발췌**한 색. 재현이 아니다.
