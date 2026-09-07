@@ -34,8 +34,9 @@ dev_dependencies:
 
 screenshots:
   - description: >-
-      The example app in light mode, drawing Dart with the default palette
-      derived from the app's ColorScheme.
+      The example app in light mode. The default palette is derived from the
+      app's ColorScheme, and the swatches in the bar change the seed it
+      derives from.
     path: screenshots/light.png
   - description: >-
       The same screen in dark mode. The default palette is derived, so it is

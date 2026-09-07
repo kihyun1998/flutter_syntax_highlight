@@ -219,7 +219,10 @@ flutter run
 ```
 
 One screen: a fragment with nested interpolation, a dropdown over the derived
-default plus all ten presets, and a brightness toggle.
+default plus all ten presets, a brightness toggle, and seed swatches — change
+the seed and the derived palette moves with your scheme. The last swatch is
+monochrome, which is the claim from the other side: with no colour to borrow,
+none appears.
 
 ## License
 
