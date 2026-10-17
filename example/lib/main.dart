@@ -74,6 +74,33 @@ class Seed {
   final DynamicSchemeVariant variant;
 }
 
+/// 휠 데모에서 고를 수 있는 움직임.
+///
+/// 첫 항목이 `SyntaxText`의 기본값이고, 마지막 `null`이 애니메이션을 끈다. 바꿔도
+/// 스크롤 위치는 그대로라, 같은 자리에서 굴려 보며 비교할 수 있다.
+const motions = <String, WheelMotion?>{
+  'spring (기본값)': WheelMotion.spring(),
+  'spring 250ms, bounce 0.2': WheelMotion.spring(
+    duration: Duration(milliseconds: 250),
+    bounce: 0.2,
+  ),
+  'curve easeOut': WheelMotion.curve(curve: Curves.easeOut),
+  'lerp': WheelMotion.lerp(),
+  '끔 (null)': null,
+};
+
+/// 휠 데모의 조각. **창보다 길고 넓어야** 휠로 움직일 것이 있다 — [sample]은
+/// 800×600 창 안에 다 들어가서 어느 축으로도 스크롤되지 않는다. 가로는
+/// Shift+휠로 움직인다.
+final wheelSample = [
+  '// Long and wide on purpose: turn the wheel, then Shift+wheel.',
+  'class Ledger {',
+  for (var i = 0; i < 120; i++)
+    "  static const line$i = 'a deliberately long string literal, so that this "
+        "line runs well past the right edge of the window: $i';",
+  '}',
+].join('\n');
+
 const seeds = <Seed>[
   Seed('보라', Color(0xFF6750A4)),
   Seed('청록', Color(0xFF006B5F)),
@@ -93,6 +120,8 @@ class _ExampleAppState extends State<ExampleApp> {
   var _brightness = Brightness.light;
   var _seed = seeds.first;
   var _palette = palettes.keys.first;
+  var _wheelDemo = false;
+  var _motion = motions.keys.first;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +167,13 @@ class _ExampleAppState extends State<ExampleApp> {
                     _brightness = isLight ? Brightness.dark : Brightness.light,
               ),
             ),
+            // 휠 데모 토글. 첫 화면은 스크린샷이 가리키는 것이라 그대로 두고,
+            // 휠은 넘칠 만큼 긴 조각에서 보인다.
+            IconButton(
+              tooltip: _wheelDemo ? '처음 화면으로' : '휠 데모',
+              icon: Icon(_wheelDemo ? Icons.mouse : Icons.mouse_outlined),
+              onPressed: () => setState(() => _wheelDemo = !_wheelDemo),
+            ),
             const SizedBox(width: 8),
           ],
         ),
@@ -150,29 +186,35 @@ class _ExampleAppState extends State<ExampleApp> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  const Text('팔레트'),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: _palette,
-                      items: [
-                        for (final name in palettes.keys)
-                          DropdownMenuItem(value: name, child: Text(name)),
+              child: _wheelDemo
+                  ? _motionPicker()
+                  : Row(
+                      children: [
+                        const Text('팔레트'),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _palette,
+                            items: [
+                              for (final name in palettes.keys)
+                                DropdownMenuItem(
+                                  value: name,
+                                  child: Text(name),
+                                ),
+                            ],
+                            onChanged: (name) =>
+                                setState(() => _palette = name ?? _palette),
+                          ),
+                        ),
                       ],
-                      onChanged: (name) =>
-                          setState(() => _palette = name ?? _palette),
                     ),
-                  ),
-                ],
-              ),
             ),
             Expanded(
               child: SyntaxText(
-                sample,
+                _wheelDemo ? wheelSample : sample,
                 palette: palettes[_palette],
+                wheelMotion: motions[_motion],
                 copyTooltip: '복사',
                 copiedTooltip: '복사됨',
               ),
@@ -182,4 +224,22 @@ class _ExampleAppState extends State<ExampleApp> {
       ),
     );
   }
+
+  Widget _motionPicker() => Row(
+    children: [
+      const Text('휠'),
+      const SizedBox(width: 12),
+      Expanded(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: _motion,
+          items: [
+            for (final name in motions.keys)
+              DropdownMenuItem(value: name, child: Text(name)),
+          ],
+          onChanged: (name) => setState(() => _motion = name ?? _motion),
+        ),
+      ),
+    ],
+  );
 }

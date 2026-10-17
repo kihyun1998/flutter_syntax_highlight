@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.0
+
+`SyntaxText` now glides on a mouse wheel instead of jumping a notch at a time.
+
+**Breaking: the SDK floor is now Flutter 3.32 / Dart 3.8** (was 3.27 / 3.6). The
+wheel motion comes from
+[`flutter_smooth_wheel_scroll`](https://pub.dev/packages/flutter_smooth_wheel_scroll),
+which needs that floor. On Flutter 3.27–3.31, stay on 0.2.0.
+
+- A wheel notch animates to its target with a spring, and notches during the
+  motion add to the target. It never passes the start or end of the code.
+  Shift+wheel moves sideways the same way, and a wheel turned over the
+  scrollbar glides too, because the scrollbar shares the view's controller.
+- Dragging, dragging the scrollbar, the keyboard and the trackpad move exactly
+  as before.
+- `wheelMotion` picks the motion: `WheelMotion.spring` (the default),
+  `.curve` or `.lerp`, or `null` to move at once. It applies to both axes, and
+  changing it keeps the scroll position.
+- `WheelMotion` is exported from this package, so you do not need to depend on
+  `flutter_smooth_wheel_scroll` yourself to pass one.
+- How far a notch travels is app-wide and not set here — use
+  `SmoothWheelBinding` from `flutter_smooth_wheel_scroll` in your `main()`.
+- The example gained a wheel demo: a code block longer and wider than the
+  window, with a picker for the motion.
+
 ## 0.2.0
 
 The palette derived from your `ColorScheme` now borrows your app's accent, in

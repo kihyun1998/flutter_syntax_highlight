@@ -15,7 +15,7 @@ On the `return` line, inside `'${value ? '✓' : '✗'}'`: the nested `'✓'` an
 
 ```yaml
 dependencies:
-  flutter_syntax_highlight: ^0.2.0
+  flutter_syntax_highlight: ^0.3.0
 ```
 
 ```dart
@@ -196,6 +196,7 @@ SyntaxText(
   EdgeInsetsGeometry padding = const EdgeInsets.all(16),
   String copyTooltip = 'Copy',
   String copiedTooltip = 'Copied',
+  WheelMotion? wheelMotion = const WheelMotion.spring(),
 })
 ```
 
@@ -208,6 +209,22 @@ SyntaxText(
 - **Dragging sideways over the text does not scroll it** — the selection gesture
   takes horizontal drags. The scrollbar is the sideways affordance on touch; on
   desktop, trackpad and wheel work.
+- **A mouse wheel glides instead of jumping.** Each notch animates to its
+  target, on both axes (Shift+wheel for sideways), and never passes the ends.
+  `wheelMotion` picks how — `WheelMotion.spring` (the default), `.curve`,
+  `.lerp`, or `null` to move at once:
+
+  ```dart
+  SyntaxText(
+    source,
+    wheelMotion: const WheelMotion.spring(duration: Duration(milliseconds: 250)),
+  )
+  ```
+
+  `WheelMotion` is exported from this package. Only the wheel animates; dragging,
+  the keyboard and the trackpad move as before. How far one notch travels is
+  app-wide, not per widget — set it with `SmoothWheelBinding` from
+  [`flutter_smooth_wheel_scroll`](https://pub.dev/packages/flutter_smooth_wheel_scroll).
 - **There are no line numbers.** A gutter would put `\u{FFFC}` into every copied
   line, which is the one thing this package exists not to do.
 
@@ -222,7 +239,8 @@ One screen: a fragment with nested interpolation, a dropdown over the derived
 default plus all ten presets, a brightness toggle, and seed swatches — change
 the seed and the derived palette moves with your scheme. The last swatch is
 monochrome, which is the claim from the other side: with no colour to borrow,
-none appears.
+none appears. The mouse icon switches to a wheel demo — a block longer and wider
+than the window, with a picker for `wheelMotion`.
 
 ## License
 
