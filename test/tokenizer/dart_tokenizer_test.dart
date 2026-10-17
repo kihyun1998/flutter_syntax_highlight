@@ -16,9 +16,9 @@ import '../support/partition.dart';
 /// 보간 검사는 **성질이 아니라 스트림 전체를 비교한다.** 다섯 입력은 전부
 /// 정전(canon)이고, 성질만 보는 검사는 통과하는 잘못된 스트림이 항상 존재한다.
 /// 무엇이 바뀌든 반드시 빨간색이 되어야 한다.
-List<String> streamOf(String source) => tokenizeDart(source)
-    .map((t) => '${t.kind.name}|${t.text}')
-    .toList(growable: false);
+List<String> streamOf(String source) => tokenizeDart(
+  source,
+).map((t) => '${t.kind.name}|${t.text}').toList(growable: false);
 
 void main() {
   group('partition — 붙여넣기 계약이 기대는 성질', () {
@@ -26,7 +26,8 @@ void main() {
       // 여러 줄 리터럴이 아니라 escape다: 이 파일도 체크아웃의 줄바꿈 정규화를
       // 똑같이 받으므로, 리터럴로 쓰면 의도한 것이 아니라 체크아웃이 만들어낸
       // 것을 주장하게 된다. escape만이 체크아웃에 면역이다.
-      const awkward = 'class A {\r\n'
+      const awkward =
+          'class A {\r\n'
           '  // a comment with CRLF\r\n'
           '\r'
           '\tfinal x = 1;\n'
@@ -78,8 +79,9 @@ void main() {
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
+      final strings = tokens
+          .where((t) => t.kind == DartTokenKind.string)
+          .toList();
       expect(strings, hasLength(1));
       expect(strings.single.text, "'x'");
     });
@@ -187,12 +189,14 @@ void main() {
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
+      final strings = tokens
+          .where((t) => t.kind == DartTokenKind.string)
+          .toList();
       expect(
         strings.single.text,
         r"r'a\'",
-        reason: '백슬래시가 escape로 처리되어 닫는 따옴표를 건너뛰었고, '
+        reason:
+            '백슬래시가 escape로 처리되어 닫는 따옴표를 건너뛰었고, '
             '줄의 나머지가 문자열 색이 되었다',
       );
     });
@@ -202,8 +206,9 @@ void main() {
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
+      final strings = tokens
+          .where((t) => t.kind == DartTokenKind.string)
+          .toList();
       expect(strings.single.text, "'''\nline\n'''");
     });
 
@@ -212,8 +217,9 @@ void main() {
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
-      final comments =
-          tokens.where((t) => t.kind == DartTokenKind.comment).toList();
+      final comments = tokens
+          .where((t) => t.kind == DartTokenKind.comment)
+          .toList();
       expect(
         comments.single.text,
         '/* outer /* inner */ still outer */',
@@ -230,8 +236,9 @@ void main() {
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
-      final strings =
-          tokens.where((t) => t.kind == DartTokenKind.string).toList();
+      final strings = tokens
+          .where((t) => t.kind == DartTokenKind.string)
+          .toList();
       expect(strings.single.text, "'oops");
       expect(
         tokens.any(
@@ -270,9 +277,9 @@ void main() {
       ]);
       // 부수 조건 — 둘째 줄이 문자열에 삼켜지지 않았다.
       expect(
-        tokenizeDart(source)
-            .where((t) => t.kind == DartTokenKind.keyword)
-            .length,
+        tokenizeDart(
+          source,
+        ).where((t) => t.kind == DartTokenKind.keyword).length,
         2,
         reason: '파일의 나머지가 문자열 하나로 칠해졌다',
       );
@@ -387,11 +394,7 @@ void main() {
 
       expectPartitions(source);
       expect(tokens.first.kind, DartTokenKind.number);
-      expect(
-        tokens.first.text,
-        '1',
-        reason: '메서드 이름이 숫자 리터럴에 먹혔다',
-      );
+      expect(tokens.first.text, '1', reason: '메서드 이름이 숫자 리터럴에 먹혔다');
     });
 
     test('같은 kind의 인접한 run은 하나로 합쳐진다', () {
@@ -402,11 +405,7 @@ void main() {
       final tokens = tokenizeDart('((( )))');
 
       expectPartitions('((( )))');
-      expect(
-        tokens,
-        hasLength(3),
-        reason: '구두점 / 공백 / 구두점이지 일곱 개의 토큰이 아니다',
-      );
+      expect(tokens, hasLength(3), reason: '구두점 / 공백 / 구두점이지 일곱 개의 토큰이 아니다');
     });
 
     test('ASCII가 아닌 글리프는 토큰 하나로 살아남는다', () {

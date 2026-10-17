@@ -37,11 +37,7 @@ void main() {
     // 같은 모양을 쓴다. 분리해 두면 이 파일의 partition 검사들이 개별로는 초록인
     // 채 아무것도 돌리지 않는 상태가 가능하다.
     test('픽스처 corpus 전체에 대해 성립한다', () {
-      expect(
-        fixtures,
-        isNotEmpty,
-        reason: '픽스처가 없다 — 이 검사는 아무것도 돌리지 않는다',
-      );
+      expect(fixtures, isNotEmpty, reason: '픽스처가 없다 — 이 검사는 아무것도 돌리지 않는다');
       for (final file in fixtures) {
         expectPartitions(file.readAsStringSync(), label: file.path);
       }

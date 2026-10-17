@@ -281,10 +281,11 @@ class _SyntaxTextState extends State<SyntaxText> {
     final chrome = background == null
         ? scheme.onSurfaceVariant
         : palette.comment?.color ??
-            palette.plain?.color ??
-            scheme.onSurfaceVariant;
-    final chromeStrong =
-        background == null ? scheme.onSurface : palette.plain?.color ?? chrome;
+              palette.plain?.color ??
+              scheme.onSurfaceVariant;
+    final chromeStrong = background == null
+        ? scheme.onSurface
+        : palette.plain?.color ?? chrome;
 
     if (widget.copyable) {
       code = Stack(

@@ -87,10 +87,18 @@ void main() {
         }
       }
 
-      between(palette.string!.color!, colourful.onSurfaceVariant,
-          colourful.tertiary, 'string');
-      between(palette.function!.color!, colourful.onSurface, colourful.primary,
-          'function');
+      between(
+        palette.string!.color!,
+        colourful.onSurfaceVariant,
+        colourful.tertiary,
+        'string',
+      );
+      between(
+        palette.function!.color!,
+        colourful.onSurface,
+        colourful.primary,
+        'function',
+      );
       for (final kind in [DartTokenKind.number, DartTokenKind.punctuation]) {
         expect(
           {colourful.onSurfaceVariant, colourful.outline},
@@ -270,7 +278,9 @@ void main() {
         keyword: TextStyle(color: Color(0xFF0000FF)),
       );
       expect(
-          mine.styleFor(DartTokenKind.comment)!.color, const Color(0xFF888888));
+        mine.styleFor(DartTokenKind.comment)!.color,
+        const Color(0xFF888888),
+      );
       // 주지 않은 kind는 null이다 — 루트 스타일을 물려받는다.
       expect(mine.styleFor(DartTokenKind.string), isNull);
     });

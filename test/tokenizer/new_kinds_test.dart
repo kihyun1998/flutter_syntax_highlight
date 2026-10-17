@@ -9,10 +9,9 @@ import '../support/partition.dart';
 /// 둘은 성격이 다르다. `escape`는 스캐너가 문자열 안을 이미 지나가므로 경계를
 /// 내보내기만 하면 되지만, `function`은 **없던 분기를 추가한다.** 이 결정 전체에서
 /// 스캐너의 동작을 늘리는 유일한 항목이므로 회귀 위험이 여기 몰려 있다.
-List<String> textsOf(String source, DartTokenKind kind) => tokenizeDart(source)
-    .where((t) => t.kind == kind)
-    .map((t) => t.text)
-    .toList();
+List<String> textsOf(String source, DartTokenKind kind) => tokenizeDart(
+  source,
+).where((t) => t.kind == kind).map((t) => t.text).toList();
 
 void main() {
   group('escape — 어휘로 확정된다', () {

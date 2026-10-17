@@ -28,7 +28,8 @@ void expectPartitions(
   expect(
     tokens.map((t) => t.text).join(),
     source,
-    reason: '입력이 토큰화를 거치며 달라졌다$where — '
+    reason:
+        '입력이 토큰화를 거치며 달라졌다$where — '
         '화면에 그려지는 것이 더 이상 소비자가 건넨 바이트가 아니다',
   );
 
@@ -39,7 +40,8 @@ void expectPartitions(
   expect(
     tokens.map((t) => t.kind).toSet().length,
     greaterThan(1),
-    reason: '토큰 하나가 전부를 덮어도 partition은 만족된다$where. '
+    reason:
+        '토큰 하나가 전부를 덮어도 partition은 만족된다$where. '
         '스캐너가 분류를 그만두면 이 조건이 잡는다',
   );
 }

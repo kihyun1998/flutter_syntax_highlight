@@ -44,8 +44,11 @@ void main() {
       ];
       presets.forEach((name, palette) {
         for (final kind in seven) {
-          expect(palette.styleFor(kind)?.color, isNotNull,
-              reason: '$name의 $kind');
+          expect(
+            palette.styleFor(kind)?.color,
+            isNotNull,
+            reason: '$name의 $kind',
+          );
         }
       });
     });
@@ -79,8 +82,11 @@ void main() {
       // 복사해 붙이다 값을 안 바꾼 프리셋을 잡는다.
       final seen = <SyntaxPalette, String>{};
       presets.forEach((name, palette) {
-        expect(seen, isNot(contains(palette)),
-            reason: '$name이 ${seen[palette]}와 똑같다');
+        expect(
+          seen,
+          isNot(contains(palette)),
+          reason: '$name이 ${seen[palette]}와 똑같다',
+        );
         seen[palette] = name;
       });
     });
@@ -92,7 +98,8 @@ void main() {
         expect(
           e.value.background,
           isNotNull,
-          reason: '${e.key}에 배경이 없다 — 색들은 특정 배경 위에서 고른 것이라, '
+          reason:
+              '${e.key}에 배경이 없다 — 색들은 특정 배경 위에서 고른 것이라, '
               '배경 없이 실으면 원본이 정한 대비가 사라진다',
         );
       }
@@ -122,7 +129,8 @@ void main() {
         expect(
           ratio,
           greaterThan(4.1),
-          reason: '${e.key}: 본문이 자기 배경 위에서 '
+          reason:
+              '${e.key}: 본문이 자기 배경 위에서 '
               '${ratio.toStringAsFixed(2)}:1이다',
         );
       }
@@ -134,8 +142,10 @@ void main() {
       const white = Color(0xFFFFFFFF);
       expect(SyntaxPalette.cobalt2.plain!.color, white);
       expect(_contrast(const Color(0xFFFDF7FF), white), lessThan(1.1));
-      expect(_contrast(SyntaxPalette.cobalt2.background!, white),
-          greaterThan(12.0));
+      expect(
+        _contrast(SyntaxPalette.cobalt2.background!, white),
+        greaterThan(12.0),
+      );
     });
   });
 
@@ -147,9 +157,11 @@ void main() {
       //
       // 이 검사가 값을 옮겨 적다 생긴 오차를 잡는다.
       final same = presets.entries
-          .where((e) =>
-              e.value.styleFor(DartTokenKind.escape)?.color ==
-              e.value.styleFor(DartTokenKind.number)?.color)
+          .where(
+            (e) =>
+                e.value.styleFor(DartTokenKind.escape)?.color ==
+                e.value.styleFor(DartTokenKind.number)?.color,
+          )
           .map((e) => e.key)
           .toSet();
       expect(same, {'monokai', 'gruvboxDark', 'gruvboxLight', 'cobalt2'});
@@ -157,9 +169,11 @@ void main() {
 
     test('주석이 기울지 않는 것은 monokai뿐이다', () {
       final upright = presets.entries
-          .where((e) =>
-              e.value.styleFor(DartTokenKind.comment)?.fontStyle !=
-              FontStyle.italic)
+          .where(
+            (e) =>
+                e.value.styleFor(DartTokenKind.comment)?.fontStyle !=
+                FontStyle.italic,
+          )
           .map((e) => e.key)
           .toSet();
       expect(upright, {'monokai'});
@@ -176,9 +190,11 @@ void main() {
         'tokyoNight': 'tokyoNightLight',
       };
       pairs.forEach((dark, light) {
-        expect(presets[dark]!.styleFor(DartTokenKind.plain)?.color,
-            isNot(presets[light]!.styleFor(DartTokenKind.plain)?.color),
-            reason: '$dark와 $light의 본문 색이 같다');
+        expect(
+          presets[dark]!.styleFor(DartTokenKind.plain)?.color,
+          isNot(presets[light]!.styleFor(DartTokenKind.plain)?.color),
+          reason: '$dark와 $light의 본문 색이 같다',
+        );
       });
     });
   });
@@ -214,15 +230,20 @@ void main() {
       // 같은 테마도 판본마다 라이선스가 다르다. 어느 파일에서 떴는지가 없으면
       // 나중에 그 판정을 다시 할 수 없다.
       // 정확한 수를 못 박는다. `>= 5`로 두면 둘이 사라져도 초록이다.
-      expect(RegExp(r'[0-9a-f]{40}').allMatches(notices).length, 7,
-          reason: '커밋으로 고정된 출처가 줄었다');
+      expect(
+        RegExp(r'[0-9a-f]{40}').allMatches(notices).length,
+        7,
+        reason: '커밋으로 고정된 출처가 줄었다',
+      );
     });
 
     test('배경값도 출처와 함께 적혀 있다', () {
       // 배경은 나중에 붙었고, 그래서 고지에서 빠지기 가장 쉬운 값이다.
       for (final e in presets.entries) {
-        final hex =
-            e.value.background!.toARGB32().toRadixString(16).substring(2);
+        final hex = e.value.background!
+            .toARGB32()
+            .toRadixString(16)
+            .substring(2);
         expect(
           notices.toUpperCase(),
           contains('#${hex.toUpperCase()}'),

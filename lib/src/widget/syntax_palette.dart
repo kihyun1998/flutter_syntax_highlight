@@ -102,31 +102,31 @@ class SyntaxPalette {
   /// 위 doc의 두 문단 — 색상을 더하지 않는다는 것과 주석을 흐리지 않는다는 것 —
   /// 이 여기 구현되어 있다.
   factory SyntaxPalette.fromColorScheme(ColorScheme scheme) => SyntaxPalette(
-        // **[background]를 주지 않는다.** 앱이 이미 칠해 둔 surface가 이
-        // 팔레트에게 올바른 배경이다 — `scheme.surface`를 여기서 다시 칠하면
-        // 같은 색을 한 겹 더 얹으면서, 앱이 코드 블록만 다른 surface 위에
-        // 올려 두는 자유를 뺏는다.
-        // `plain`은 주지 않는다. 루트 스타일이 이미 평범한 코드가 가져야 할
-        // 색이고, 토큰마다 객체 하나를 덜 만든다.
-        comment: const TextStyle(fontStyle: FontStyle.italic),
-        keyword: const TextStyle(fontWeight: FontWeight.w600),
-        // 흐린 데서 출발해 앱의 `tertiary` 쪽으로 [_accentMix]만큼 당긴다.
-        // 흐림은 남고 색상이 더해진다 — 리터럴이 본문보다 물러나 있다는 성질은
-        // 그대로고, 그 위에 구분이 하나 얹힌다.
-        string: _towards(scheme.onSurfaceVariant, scheme.tertiary),
-        // **`number`는 당기지 않는다.** 그래야 `string`이 움직이면서 문자열과
-        // 숫자 사이에 없던 구분이 생긴다(측정: ΔE 11.4). 리터럴 셋을 다 같이
-        // 옮기면 서로에 대해서는 제자리다.
-        number: TextStyle(color: scheme.onSurfaceVariant),
-        // escape는 자기 리터럴과 **함께** 그려진다 — 그것의 일부이기도 하고,
-        // 프리셋 조사(#9)에서 열 중 넷이 escape를 number와 같은 색으로 칠했다.
-        // 그러므로 [string]과 같은 값을 쓴다.
-        escape: _towards(scheme.onSurfaceVariant, scheme.tertiary),
-        // 본문에서 출발해 앱의 `primary` 쪽으로 당긴다. 조사한 테마 **9/9**가
-        // 호출 이름을 다르게 칠하는데 이 팔레트만 비워 두고 있었다.
-        function: _towards(scheme.onSurface, scheme.primary),
-        punctuation: TextStyle(color: scheme.outline),
-      );
+    // **[background]를 주지 않는다.** 앱이 이미 칠해 둔 surface가 이
+    // 팔레트에게 올바른 배경이다 — `scheme.surface`를 여기서 다시 칠하면
+    // 같은 색을 한 겹 더 얹으면서, 앱이 코드 블록만 다른 surface 위에
+    // 올려 두는 자유를 뺏는다.
+    // `plain`은 주지 않는다. 루트 스타일이 이미 평범한 코드가 가져야 할
+    // 색이고, 토큰마다 객체 하나를 덜 만든다.
+    comment: const TextStyle(fontStyle: FontStyle.italic),
+    keyword: const TextStyle(fontWeight: FontWeight.w600),
+    // 흐린 데서 출발해 앱의 `tertiary` 쪽으로 [_accentMix]만큼 당긴다.
+    // 흐림은 남고 색상이 더해진다 — 리터럴이 본문보다 물러나 있다는 성질은
+    // 그대로고, 그 위에 구분이 하나 얹힌다.
+    string: _towards(scheme.onSurfaceVariant, scheme.tertiary),
+    // **`number`는 당기지 않는다.** 그래야 `string`이 움직이면서 문자열과
+    // 숫자 사이에 없던 구분이 생긴다(측정: ΔE 11.4). 리터럴 셋을 다 같이
+    // 옮기면 서로에 대해서는 제자리다.
+    number: TextStyle(color: scheme.onSurfaceVariant),
+    // escape는 자기 리터럴과 **함께** 그려진다 — 그것의 일부이기도 하고,
+    // 프리셋 조사(#9)에서 열 중 넷이 escape를 number와 같은 색으로 칠했다.
+    // 그러므로 [string]과 같은 값을 쓴다.
+    escape: _towards(scheme.onSurfaceVariant, scheme.tertiary),
+    // 본문에서 출발해 앱의 `primary` 쪽으로 당긴다. 조사한 테마 **9/9**가
+    // 호출 이름을 다르게 칠하는데 이 팔레트만 비워 두고 있었다.
+    function: _towards(scheme.onSurface, scheme.primary),
+    punctuation: TextStyle(color: scheme.outline),
+  );
 
   // ───────────────────────────────────────────────────────────────────────
   // 이름 붙은 프리셋
@@ -265,16 +265,16 @@ class SyntaxPalette {
 
   @override
   int get hashCode => Object.hash(
-        background,
-        plain,
-        comment,
-        keyword,
-        string,
-        number,
-        punctuation,
-        escape,
-        function,
-      );
+    background,
+    plain,
+    comment,
+    keyword,
+    string,
+    number,
+    punctuation,
+    escape,
+    function,
+  );
 
   /// [kind]를 어떻게 그릴지. null이면 루트 스타일을 그대로 쓴다.
   ///
@@ -286,13 +286,13 @@ class SyntaxPalette {
   /// 준 시점에 못 박았다. 여기의 컴파일 에러는 그 문을 다시 여는 허가가 아니라,
   /// 누가 열려 할 때 소리가 나게 하는 장치다.
   TextStyle? styleFor(DartTokenKind kind) => switch (kind) {
-        DartTokenKind.plain => plain,
-        DartTokenKind.comment => comment,
-        DartTokenKind.keyword => keyword,
-        DartTokenKind.string => string,
-        DartTokenKind.number => number,
-        DartTokenKind.punctuation => punctuation,
-        DartTokenKind.escape => escape,
-        DartTokenKind.function => function,
-      };
+    DartTokenKind.plain => plain,
+    DartTokenKind.comment => comment,
+    DartTokenKind.keyword => keyword,
+    DartTokenKind.string => string,
+    DartTokenKind.number => number,
+    DartTokenKind.punctuation => punctuation,
+    DartTokenKind.escape => escape,
+    DartTokenKind.function => function,
+  };
 }

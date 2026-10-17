@@ -342,7 +342,8 @@ int _scanStringLiteral(
   _Emit? emit,
 }) {
   final quote = source.codeUnitAt(quoteAt);
-  final triple = quoteAt + 2 < source.length &&
+  final triple =
+      quoteAt + 2 < source.length &&
       source.codeUnitAt(quoteAt + 1) == quote &&
       source.codeUnitAt(quoteAt + 2) == quote;
   var j = quoteAt + (triple ? 3 : 1);
@@ -375,8 +376,11 @@ int _scanStringLiteral(
       // 구멍이 된다: 닫히지 않은 보간이 파일 끝까지 달려 나머지 전부를 문자열로
       // 칠하는데, 그것이 바로 아래의 경계가 막으려는 것이다. 삼중 따옴표
       // 리터럴만은 진짜로 여러 줄에 걸칠 수 있으므로 예외다.
-      final (end, closed) =
-          _interpolationEnd(source, j + 2, stopAtNewline: !triple);
+      final (end, closed) = _interpolationEnd(
+        source,
+        j + 2,
+        stopAtNewline: !triple,
+      );
       if (emit != null) {
         flush(j);
         emit(DartTokenKind.punctuation, j + 2); // `${`
@@ -446,7 +450,8 @@ int _scanStringLiteral(
       // 수 없었던 자리의 `r`만 접두사다. 이것을 보지 않으면 보간 안의 원시
       // 문자열이 escape를 처리하는 문자열로 스캔되어, 닫는 따옴표를 지나쳐
       // 경계가 어긋나고 `escape` kind까지 잘못 붙는다.
-      final raw = source.codeUnitAt(j - 1) == _lowerR &&
+      final raw =
+          source.codeUnitAt(j - 1) == _lowerR &&
           (j - 2 < 0 || !_isIdentifierPart(source.codeUnitAt(j - 2)));
       j = _scanStringLiteral(source, j, j, raw: raw);
       continue;

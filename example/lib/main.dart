@@ -63,8 +63,11 @@ const palettes = <String, SyntaxPalette?>{
 /// 패키지는 앱의 색상을 빌릴 뿐 자기 색상을 도입하지 않으므로, 빌릴 것이 없으면
 /// 아무 색도 나오지 않는다.
 class Seed {
-  const Seed(this.label, this.colour,
-      {this.variant = DynamicSchemeVariant.tonalSpot});
+  const Seed(
+    this.label,
+    this.colour, {
+    this.variant = DynamicSchemeVariant.tonalSpot,
+  });
 
   final String label;
   final Color colour;

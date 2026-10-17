@@ -40,15 +40,12 @@ void main() {
 
     // 부수 조건 둘. 이 가드의 경계는 **디렉터리**라서, 지키려는 대상이 거기서
     // 빠져나가면 루프가 공허하게 통과한다.
-    expect(
-      files,
-      isNotEmpty,
-      reason: '읽을 파일이 없다 — 이 테스트는 실패할 수 없는 상태가 되었다',
-    );
+    expect(files, isNotEmpty, reason: '읽을 파일이 없다 — 이 테스트는 실패할 수 없는 상태가 되었다');
     expect(
       files.map((f) => f.uri.pathSegments.last),
       contains('dart_tokenizer.dart'),
-      reason: '스캐너가 이 디렉터리에 없다. 다른 .dart 파일 하나만 남아 있어도 '
+      reason:
+          '스캐너가 이 디렉터리에 없다. 다른 .dart 파일 하나만 남아 있어도 '
           '위의 isNotEmpty는 통과하므로, 가드가 조용히 빈 채로 초록이 된다',
     );
 
@@ -65,7 +62,8 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: '토크나이저 층이 무언가를 끌어왔다. 두 층이 용접되면 kind가 '
+      reason:
+          '토크나이저 층이 무언가를 끌어왔다. 두 층이 용접되면 kind가 '
           '무엇인지와 kind가 어떻게 보이는지가 한 곳에 살게 되고, 그러면 앞의 '
           '것을 뒤의 것 없이 시험할 수 없다:\n${offenders.join('\n')}',
     );

@@ -6,7 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// 여덟 kind가 전부 나오는 조각. 가드가 닿지 않는 분기는 지키지 못하므로,
 /// 아래 검사들이 `SyntaxPalette.styleFor`의 모든 갈래를 지나가게 한다.
-const everyKind = "// a comment\n"
+const everyKind =
+    "// a comment\n"
     "class Sentinel {\n"
     "  final s = 'a\\nb';\n"
     "  var n = f(1);\n"
@@ -46,20 +47,24 @@ void main() {
   testWidgets('픽스처가 여덟 kind를 전부 낸다', (tester) async {
     // 부수 조건. 이 조각이 어떤 kind를 놓치면 아래 검사들이 그 갈래를 지나지
     // 않으면서 초록으로 남는다.
-    expect(tokenizeDart(everyKind).map((t) => t.kind).toSet(),
-        DartTokenKind.values.toSet());
+    expect(
+      tokenizeDart(everyKind).map((t) => t.kind).toSet(),
+      DartTokenKind.values.toSet(),
+    );
   });
 
   group('하이라이터는 붙여넣을 것을 바꾸지 못한다', () {
-    const tricky = "// somebody's file\r\n"
+    const tricky =
+        "// somebody's file\r\n"
         "class Sentinel {\r\n"
         "  final s = '\${a ?? ''}';\r\n"
         "}\r\n";
 
     testWidgets('렌더된 트리를 평탄화하면 정확히 그 바이트다', (tester) async {
       await pump(tester, const SyntaxText(tricky));
-      final selectable =
-          tester.widget<SelectableText>(find.byType(SelectableText));
+      final selectable = tester.widget<SelectableText>(
+        find.byType(SelectableText),
+      );
       // `includeSemanticsLabels: false`는 취향이 아니다 — 클립보드가 읽는
       // 문자열을 만들 때 컨트롤러가 하는 바로 그 호출이다.
       expect(
@@ -79,8 +84,12 @@ void main() {
           return null;
         },
       );
-      addTearDown(() => tester.binding.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null));
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
 
       await pump(tester, const SyntaxText(tricky));
       await tester.tap(find.byType(IconButton));
@@ -101,8 +110,9 @@ void main() {
       // nullable로 연 것이 옛 버그를 되살릴 새 경로다. null이 "설정하지 않음"으로
       // 해석되면 `inherit: true`가 앰비언트 스타일을 머지해 비례 글꼴로 그려진다.
       await pump(tester, const SyntaxText(everyKind));
-      final style =
-          tester.widget<EditableText>(find.byType(EditableText)).style;
+      final style = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .style;
 
       expect(style.fontFamily, isNotNull);
       expect(style.fontFamilyFallback, isNotNull);
@@ -117,7 +127,8 @@ void main() {
         style.fontFamily == 'monospace' ||
             style.fontFamilyFallback!.last == 'monospace',
         isTrue,
-        reason: '고정폭 해석이 제네릭으로 끝나지 않는다 — 목록의 어느 글꼴도 '
+        reason:
+            '고정폭 해석이 제네릭으로 끝나지 않는다 — 목록의 어느 글꼴도 '
             '없는 기기에서 비례 글꼴로 떨어진다',
       );
     });
@@ -152,15 +163,15 @@ void main() {
           .widget<SelectableText>(find.byType(SelectableText))
           .textSpan!
           .visitChildren((span) {
-        if (span is! TextSpan) {
-          foreign.add(span);
-          return true;
-        }
-        if (span.style?.fontFamily != null) {
-          families.add(span.style!.fontFamily!);
-        }
-        return true;
-      });
+            if (span is! TextSpan) {
+              foreign.add(span);
+              return true;
+            }
+            if (span.style?.fontFamily != null) {
+              families.add(span.style!.fontFamily!);
+            }
+            return true;
+          });
       expect(families, isEmpty);
       // `TextSpan`이 아닌 자식은 복사되는 텍스트에 `\u{FFFC}`를 써 넣는다.
       expect(foreign, isEmpty);
@@ -177,8 +188,9 @@ void main() {
           palette: SyntaxPalette(comment: TextStyle(color: marker)),
         ),
       );
-      final commentLeaves =
-          leavesOf(tester).where((s) => s.text!.contains('a comment')).toList();
+      final commentLeaves = leavesOf(
+        tester,
+      ).where((s) => s.text!.contains('a comment')).toList();
       expect(commentLeaves, isNotEmpty);
       expect(commentLeaves.single.style?.color, marker);
     });
@@ -187,8 +199,9 @@ void main() {
       await pump(tester, const SyntaxText(everyKind));
       final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4));
       final expected = SyntaxPalette.fromColorScheme(scheme);
-      final stringLeaf =
-          leavesOf(tester).firstWhere((s) => s.text!.startsWith("'a"));
+      final stringLeaf = leavesOf(
+        tester,
+      ).firstWhere((s) => s.text!.startsWith("'a"));
       expect(
         stringLeaf.style?.color,
         expected.styleFor(DartTokenKind.string)!.color,
@@ -197,20 +210,21 @@ void main() {
 
     testWidgets('밝기를 바꾸면 그려진 색이 따라 바뀐다', (tester) async {
       await pump(tester, const SyntaxText(everyKind));
-      final light = leavesOf(tester)
-          .firstWhere((s) => s.text!.startsWith("'a"))
-          .style
-          ?.color;
+      final light = leavesOf(
+        tester,
+      ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
 
       await pump(tester, const SyntaxText(everyKind), b: Brightness.dark);
-      final dark = leavesOf(tester)
-          .firstWhere((s) => s.text!.startsWith("'a"))
-          .style
-          ?.color;
+      final dark = leavesOf(
+        tester,
+      ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
 
       expect(light, isNotNull);
-      expect(dark, isNot(light),
-          reason: '파생 기본값의 존재 이유가 이것이다 — 설정 없이 양쪽에서 맞는다');
+      expect(
+        dark,
+        isNot(light),
+        reason: '파생 기본값의 존재 이유가 이것이다 — 설정 없이 양쪽에서 맞는다',
+      );
     });
   });
 
@@ -229,9 +243,7 @@ void main() {
       );
 
       expect(
-        find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == marker,
-        ),
+        find.byWidgetPredicate((w) => w is ColoredBox && w.color == marker),
         findsOneWidget,
       );
     });
@@ -241,10 +253,12 @@ void main() {
       // "색상을 더하지 않는다"는 결정을 어긴다.
       await pump(tester, const SyntaxText(everyKind));
 
-      final painted = tester.widgetList<ColoredBox>(find.descendant(
-        of: find.byType(SyntaxText),
-        matching: find.byType(ColoredBox),
-      ));
+      final painted = tester.widgetList<ColoredBox>(
+        find.descendant(
+          of: find.byType(SyntaxText),
+          matching: find.byType(ColoredBox),
+        ),
+      );
       expect(painted, isEmpty);
     });
 
@@ -321,28 +335,35 @@ void main() {
     testWidgets('가로는 항상 위젯이 소유한다', (tester) async {
       await pump(tester, const SyntaxText(everyKind, scrollable: false));
       final views = tester.widgetList<SingleChildScrollView>(
-          find.byType(SingleChildScrollView));
+        find.byType(SingleChildScrollView),
+      );
       expect(views.map((v) => v.scrollDirection), contains(Axis.horizontal));
     });
 
     testWidgets('scrollable: false면 세로 스크롤이 없다', (tester) async {
       await pump(tester, const SyntaxText(everyKind, scrollable: false));
       final views = tester.widgetList<SingleChildScrollView>(
-          find.byType(SingleChildScrollView));
+        find.byType(SingleChildScrollView),
+      );
       expect(
-          views.map((v) => v.scrollDirection), isNot(contains(Axis.vertical)));
+        views.map((v) => v.scrollDirection),
+        isNot(contains(Axis.vertical)),
+      );
     });
 
     testWidgets('scrollable: true면 자기 영역 안에서 세로로 스크롤한다', (tester) async {
       final long = List.generate(200, (i) => 'final x$i = $i;').join('\n');
       await pump(tester, SyntaxText(long));
       final views = tester.widgetList<SingleChildScrollView>(
-          find.byType(SingleChildScrollView));
+        find.byType(SingleChildScrollView),
+      );
       expect(views.map((v) => v.scrollDirection), contains(Axis.vertical));
 
       final vertical = tester.widget<SingleChildScrollView>(
-        find.byWidgetPredicate((w) =>
-            w is SingleChildScrollView && w.scrollDirection == Axis.vertical),
+        find.byWidgetPredicate(
+          (w) =>
+              w is SingleChildScrollView && w.scrollDirection == Axis.vertical,
+        ),
       );
       // 컨트롤러를 패키지가 이름 붙여 소유한다. `primary`가 켜지면 두 스크롤
       // 뷰가 같은 `PrimaryScrollController`를 주장해 framework가 assert한다.
@@ -383,8 +404,9 @@ void main() {
         tester,
         const SyntaxText(everyKind, fontSize: 33, height: 2.5),
       );
-      final style =
-          tester.widget<EditableText>(find.byType(EditableText)).style;
+      final style = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .style;
       expect(style.fontSize, 33);
       expect(style.height, 2.5);
     });
@@ -398,8 +420,9 @@ void main() {
           fontFamilyFallback: ['AlsoGiven'],
         ),
       );
-      final style =
-          tester.widget<EditableText>(find.byType(EditableText)).style;
+      final style = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .style;
       expect(style.fontFamily, 'GivenMono');
       expect(style.fontFamilyFallback, ['AlsoGiven']);
     });
@@ -410,10 +433,7 @@ void main() {
         const SyntaxText(everyKind, padding: EdgeInsets.all(40)),
       );
       final padding = tester.widgetList<Padding>(find.byType(Padding));
-      expect(
-        padding.map((p) => p.padding),
-        contains(const EdgeInsets.all(40)),
-      );
+      expect(padding.map((p) => p.padding), contains(const EdgeInsets.all(40)));
     });
 
     testWidgets('툴팁 문구', (tester) async {
@@ -436,8 +456,10 @@ void main() {
     testWidgets('세로는 끌어서 넘어간다', (tester) async {
       await pump(tester, SyntaxText(long));
       final vertical = tester.widget<SingleChildScrollView>(
-        find.byWidgetPredicate((w) =>
-            w is SingleChildScrollView && w.scrollDirection == Axis.vertical),
+        find.byWidgetPredicate(
+          (w) =>
+              w is SingleChildScrollView && w.scrollDirection == Axis.vertical,
+        ),
       );
       expect(vertical.controller!.position.maxScrollExtent, greaterThan(0));
 
@@ -458,11 +480,17 @@ void main() {
       // 걷어내기 때문이다.
       await pump(tester, SyntaxText(long));
       final horizontal = tester.widget<SingleChildScrollView>(
-        find.byWidgetPredicate((w) =>
-            w is SingleChildScrollView && w.scrollDirection == Axis.horizontal),
+        find.byWidgetPredicate(
+          (w) =>
+              w is SingleChildScrollView &&
+              w.scrollDirection == Axis.horizontal,
+        ),
       );
-      expect(horizontal.controller!.position.maxScrollExtent, greaterThan(0),
-          reason: '줄이 접혔다 — 접힌 줄은 다른 줄이다');
+      expect(
+        horizontal.controller!.position.maxScrollExtent,
+        greaterThan(0),
+        reason: '줄이 접혔다 — 접힌 줄은 다른 줄이다',
+      );
 
       await tester.dragFrom(
         tester.getCenter(find.byType(SyntaxText)),
@@ -485,9 +513,11 @@ void main() {
       await pump(tester, SyntaxText(long));
       final controller = tester
           .widget<SingleChildScrollView>(
-            find.byWidgetPredicate((w) =>
-                w is SingleChildScrollView &&
-                w.scrollDirection == Axis.vertical),
+            find.byWidgetPredicate(
+              (w) =>
+                  w is SingleChildScrollView &&
+                  w.scrollDirection == Axis.vertical,
+            ),
           )
           .controller!;
       await pump(tester, const SizedBox());

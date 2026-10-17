@@ -43,9 +43,7 @@ List<double> _lab(Color c) {
 
 double _deltaE(Color a, Color b) {
   final p = _lab(a), q = _lab(b);
-  return sqrt(
-    pow(p[0] - q[0], 2) + pow(p[1] - q[1], 2) + pow(p[2] - q[2], 2),
-  );
+  return sqrt(pow(p[0] - q[0], 2) + pow(p[1] - q[1], 2) + pow(p[2] - q[2], 2));
 }
 
 /// 색상환 × 밝기 전체. 각 스킴마다 [probe]를 부른다.
@@ -82,7 +80,8 @@ void main() {
         expect(
           e.value,
           greaterThan(_tooSubtle),
-          reason: '${e.key}이 ΔE ${e.value.toStringAsFixed(1)}로 '
+          reason:
+              '${e.key}이 ΔE ${e.value.toStringAsFixed(1)}로 '
               '"거의 안 보이던" 눈금($_tooSubtle) 아래다',
         );
       }
