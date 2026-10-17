@@ -639,6 +639,98 @@ void main() {
           await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
         }
       });
+
+      group('wheelMotion', () {
+        /// 인자를 생략한 것. `null`을 넘긴 것과 구별한다.
+        const omitted = Object();
+
+        Widget view(Object? motion) => identical(motion, omitted)
+            ? SyntaxText(long)
+            : SyntaxText(long, wheelMotion: motion as WheelMotion?);
+
+        /// 새 트리에서 세로 한 notch를 보내고, 첫 프레임 뒤의 위치를 돌려준다.
+        Future<double> firstStep(WidgetTester tester, Object? motion) async {
+          await pump(tester, const SizedBox());
+          await pump(tester, view(motion));
+          await wheel(tester, tester.getCenter(find.byType(SyntaxText)), 120);
+          await tester.pump();
+          await tester.pump(frame);
+          return along(tester, Axis.vertical).pixels;
+        }
+
+        testWidgets('null이면 세로도 가로도 즉시 간다', (tester) async {
+          await pump(tester, view(null));
+          final center = tester.getCenter(find.byType(SyntaxText));
+          await wheel(tester, center, 120);
+          await tester.pump();
+          expect(along(tester, Axis.vertical).pixels, 120);
+
+          final horizontal = along(tester, Axis.horizontal);
+          final target = math.min(60.0, horizontal.maxScrollExtent);
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          try {
+            await wheel(tester, center, target);
+            await tester.pump();
+            expect(horizontal.pixels, target);
+          } finally {
+            await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          }
+        });
+
+        for (final (name, motion) in [
+          ('curve', const WheelMotion.curve(curve: Curves.easeOut)),
+          ('lerp', const WheelMotion.lerp()),
+        ]) {
+          testWidgets('$name 모션은 미끄러지되 기본 spring과 다르게 간다', (tester) async {
+            final spring = await firstStep(tester, omitted);
+            final step = await firstStep(tester, motion);
+            expect(step, greaterThan(0));
+            expect(step, lessThan(120));
+            expect(step, isNot(moreOrLessEquals(spring)));
+
+            await tester.pumpAndSettle();
+            expect(along(tester, Axis.vertical).pixels, 120);
+          });
+        }
+
+        testWidgets('바꾸면 위치는 그대로고 다음 notch부터 적용된다', (tester) async {
+          await pump(tester, view(omitted));
+          final center = tester.getCenter(find.byType(SyntaxText));
+          await wheel(tester, center, 120);
+          await tester.pumpAndSettle();
+          expect(along(tester, Axis.vertical).pixels, 120);
+
+          await pump(tester, view(null));
+          expect(along(tester, Axis.vertical).pixels, 120);
+
+          await wheel(tester, center, 120);
+          await tester.pump();
+          expect(along(tester, Axis.vertical).pixels, 240);
+        });
+      });
+
+      testWidgets('scrollable: false인 블록 위의 세로 휠은 바깥 뷰가 받는다', (tester) async {
+        // 글 안에 박힌 코드 블록. 그 위에서 세로로 굴리면 글이 넘어가야 한다 —
+        // 블록이 소유한 가로 뷰가 세로 휠을 가져가면 페이지가 거기서 멈춘다.
+        final outer = ScrollController();
+        addTearDown(outer.dispose);
+        await pump(
+          tester,
+          SingleChildScrollView(
+            controller: outer,
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                SyntaxText(long, scrollable: false),
+                const SizedBox(height: 400),
+              ],
+            ),
+          ),
+        );
+        await wheel(tester, const Offset(200, 150), 120);
+        await tester.pumpAndSettle();
+        expect(outer.position.pixels, 120);
+      });
     });
 
     testWidgets('컨트롤러는 트리와 함께 정리된다', (tester) async {

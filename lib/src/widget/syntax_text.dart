@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smooth_wheel_scroll/flutter_smooth_wheel_scroll.dart'
-    show SmoothScrollController;
+    show SmoothScrollController, WheelMotion;
 
 import '../tokenizer/dart_tokenizer.dart';
 import 'syntax_palette.dart';
@@ -55,8 +55,8 @@ import 'syntax_palette.dart';
 /// ## 마우스 휠은 미끄러진다
 ///
 /// 두 컨트롤러는 `flutter_smooth_wheel_scroll`의 `SmoothScrollController`다. 휠
-/// 한 notch는 순간이동하지 않고 spring으로 목표까지 가며, 코드의 시작과 끝을 넘지
-/// 않는다. 가로는 Shift+휠로 같은 방식으로 움직인다. 스크롤바가 뷰와 같은
+/// 한 notch는 순간이동하지 않고 [wheelMotion]으로 목표까지 가며, 코드의 시작과
+/// 끝을 넘지 않는다. 가로는 Shift+휠로 같은 방식으로 움직인다. 스크롤바가 뷰와 같은
 /// 컨트롤러를 쓰므로 스크롤바 위에서 굴린 휠도 같다.
 ///
 /// 드래그, 스크롤바 드래그, 키보드, 트랙패드는 [ScrollController]일 때와 같다.
@@ -102,6 +102,7 @@ class SyntaxText extends StatefulWidget {
     this.padding = const EdgeInsets.all(16),
     this.copyTooltip = 'Copy',
     this.copiedTooltip = 'Copied',
+    this.wheelMotion = const WheelMotion.spring(),
   });
 
   /// 그릴 Dart 소스.
@@ -139,6 +140,27 @@ class SyntaxText extends StatefulWidget {
   final double fontSize;
   final double height;
   final EdgeInsetsGeometry padding;
+
+  /// 마우스 휠에 코드가 움직이는 방식. 세로와 가로 둘 다에 걸린다.
+  ///
+  /// 기본값은 `WheelMotion.spring()`이다: notch가 가리키는 곳까지 애니메이션하고,
+  /// 움직이는 동안 들어온 notch는 그 목표에 더해진다. `null`이면 notch마다 즉시
+  /// 간다.
+  ///
+  /// ```dart
+  /// wheelMotion: const WheelMotion.spring(
+  ///   duration: Duration(milliseconds: 250),
+  /// ),
+  /// wheelMotion: null, // 애니메이션 없음
+  /// ```
+  ///
+  /// 바꾸면 스크롤 위치는 그대로이고 다음 notch부터 적용된다. 애니메이션하는 것은
+  /// 휠뿐이다 — 드래그, 스크롤바 드래그, 키보드, 트랙패드는 즉시 움직이고 진행 중인
+  /// motion을 멈춘다.
+  ///
+  /// notch 하나가 얼마나 가는지는 여기서 정하지 않는다. 앱 전체에 걸리는 것이고,
+  /// `flutter_smooth_wheel_scroll`의 `SmoothWheelBinding`으로 정한다.
+  final WheelMotion? wheelMotion;
 
   /// 플랫폼별 고정폭 글꼴.
   ///
@@ -193,8 +215,14 @@ class _SyntaxTextState extends State<SyntaxText> {
   /// 2026-09-06 측정으로 이 저장소에서 가장 큰 파일이 3101 토큰이다.
   late List<DartToken> _tokens;
 
-  final _vertical = SmoothScrollController();
-  final _horizontal = SmoothScrollController();
+  late final _vertical = SmoothScrollController(motion: _motion);
+  late final _horizontal = SmoothScrollController(motion: _motion);
+
+  /// 길이 0의 motion은 [ScrollController] 자신의 휠 경로를 탄다. `null`을 위해
+  /// 컨트롤러를 갈아끼우지 않는 이유다 — 갈아끼우면 스크롤 위치를 잃는다.
+  static const _instant = WheelMotion.spring(duration: Duration.zero);
+
+  WheelMotion get _motion => widget.wheelMotion ?? _instant;
 
   Timer? _confirmation;
   bool _copied = false;
@@ -208,6 +236,10 @@ class _SyntaxTextState extends State<SyntaxText> {
   @override
   void didUpdateWidget(SyntaxText oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.wheelMotion != widget.wheelMotion) {
+      _vertical.motion = _motion;
+      _horizontal.motion = _motion;
+    }
     if (oldWidget.source == widget.source) return;
     // 소스만 본다. 밝기가 바뀌면 같은 토큰을 다시 칠할 뿐이다.
     _tokens = tokenizeDart(widget.source);

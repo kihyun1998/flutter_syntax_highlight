@@ -14,3 +14,7 @@ library;
 export 'src/tokenizer/dart_tokenizer.dart';
 export 'src/widget/syntax_palette.dart';
 export 'src/widget/syntax_text.dart';
+
+// `SyntaxText.wheelMotion`이 받는 타입. 이 import 하나로 쓸 수 있게 내보낸다.
+export 'package:flutter_smooth_wheel_scroll/flutter_smooth_wheel_scroll.dart'
+    show WheelMotion;
