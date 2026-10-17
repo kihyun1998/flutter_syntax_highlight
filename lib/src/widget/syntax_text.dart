@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_smooth_wheel_scroll/flutter_smooth_wheel_scroll.dart'
+    show SmoothScrollController;
 
 import '../tokenizer/dart_tokenizer.dart';
 import 'syntax_palette.dart';
@@ -49,6 +51,17 @@ import 'syntax_palette.dart';
 /// 그래서 가로 [Scrollbar]는 장식이 아니라 **터치에서 유일한 가로 어포던스**다.
 /// 데스크톱에서는 트랙패드와 휠도 쓸 수 있다. 이 위젯에서 스크롤바를 걷어내려는
 /// 사람은 이 문단을 먼저 읽어야 한다.
+///
+/// ## 마우스 휠은 미끄러진다
+///
+/// 두 컨트롤러는 `flutter_smooth_wheel_scroll`의 `SmoothScrollController`다. 휠
+/// 한 notch는 순간이동하지 않고 spring으로 목표까지 가며, 코드의 시작과 끝을 넘지
+/// 않는다. 가로는 Shift+휠로 같은 방식으로 움직인다. 스크롤바가 뷰와 같은
+/// 컨트롤러를 쓰므로 스크롤바 위에서 굴린 휠도 같다.
+///
+/// 드래그, 스크롤바 드래그, 키보드, 트랙패드는 [ScrollController]일 때와 같다.
+/// notch 하나가 얼마나 가는지는 이 위젯이 아니라 앱이 정한다 — 앱 전체에 걸리는
+/// `SmoothWheelBinding`의 몫이다.
 ///
 /// ## 글꼴은 `TextStyle` 하나가 아니라 숫자 몇 개로 받는다
 ///
@@ -180,8 +193,8 @@ class _SyntaxTextState extends State<SyntaxText> {
   /// 2026-09-06 측정으로 이 저장소에서 가장 큰 파일이 3101 토큰이다.
   late List<DartToken> _tokens;
 
-  final _vertical = ScrollController();
-  final _horizontal = ScrollController();
+  final _vertical = SmoothScrollController();
+  final _horizontal = SmoothScrollController();
 
   Timer? _confirmation;
   bool _copied = false;

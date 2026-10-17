@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
@@ -507,6 +510,135 @@ void main() {
         contains(horizontal.controller),
         reason: '가로 스크롤바가 없다 — 터치에서 가로로 넘길 방법이 사라졌다',
       );
+    });
+
+    group('마우스 휠은 미끄러진다', () {
+      const frame = Duration(milliseconds: 16);
+
+      ScrollPosition along(WidgetTester tester, Axis axis) => tester
+          .widget<SingleChildScrollView>(
+            find.byWidgetPredicate(
+              (w) => w is SingleChildScrollView && w.scrollDirection == axis,
+            ),
+          )
+          .controller!
+          .position;
+
+      /// [at]에서 마우스 휠 한 notch를 보낸다. pump하지 않는다.
+      Future<void> wheel(WidgetTester tester, Offset at, double dy) async {
+        final pointer = TestPointer(1, PointerDeviceKind.mouse);
+        await tester.sendEventToBinding(pointer.hover(at));
+        await tester.sendEventToBinding(pointer.scroll(Offset(0, dy)));
+      }
+
+      testWidgets('한 notch가 순간이동하지 않고 목표까지 간다', (tester) async {
+        await pump(tester, SyntaxText(long));
+        await wheel(tester, tester.getCenter(find.byType(SyntaxText)), 120);
+        await tester.pump();
+        await tester.pump(frame);
+        final mid = along(tester, Axis.vertical).pixels;
+        expect(mid, greaterThan(0));
+        expect(mid, lessThan(120));
+
+        await tester.pumpAndSettle();
+        expect(along(tester, Axis.vertical).pixels, 120);
+      });
+
+      testWidgets('끝 근처의 notch는 끝에서 정확히 멈춘다', (tester) async {
+        // macOS는 `BouncingScrollPhysics`라 끝을 넘는 위치를 허용한다. 거기서
+        // 멈추게 하는 것은 휠 motion 자신의 clamp뿐이다.
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          await pump(tester, SyntaxText(long));
+          final position = along(tester, Axis.vertical);
+          final max = position.maxScrollExtent;
+          position.jumpTo(max - 30);
+          await tester.pump();
+
+          await wheel(tester, tester.getCenter(find.byType(SyntaxText)), 120);
+          await tester.pump();
+          await tester.pump(frame);
+          expect(position.pixels, lessThan(max), reason: '애니메이션 없이 점프했다');
+          while (tester.binding.hasScheduledFrame) {
+            await tester.pump(frame);
+            expect(position.pixels, lessThanOrEqualTo(max));
+          }
+          expect(position.pixels, max);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('스크롤바 위에서 굴려도 미끄러진다', (tester) async {
+        // 휠은 먼저 등록한 쪽이 가져가고, 뷰가 스크롤바보다 안쪽이라 먼저
+        // 등록한다. 스크롤바가 휠을 받는 것은 그 painter가 히트를 가로챌 때 —
+        // 데스크톱에서 그 위에 hover해 track이 드러났을 때 — 뿐이다. 그래서
+        // 데스크톱으로 두고, 뷰가 히트 경로에서 빠졌는지부터 확인한다. 아니면
+        // 이 검사는 위의 것을 다시 재는 것이 된다.
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          await pump(tester, SyntaxText(long));
+          final box = tester.getRect(find.byType(SyntaxText));
+          final bar = Offset(box.right - 3, box.center.dy);
+          final view = tester.renderObject(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is SingleChildScrollView &&
+                  w.scrollDirection == Axis.vertical,
+            ),
+          );
+          final pointer = TestPointer(1, PointerDeviceKind.mouse);
+          await tester.sendEventToBinding(pointer.hover(bar));
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .hitTestOnBinding(bar)
+                .path
+                .any((entry) => identical(entry.target, view)),
+            isFalse,
+            reason: '뷰가 휠을 받는다 — 스크롤바 경로를 재지 못한다',
+          );
+
+          await wheel(tester, bar, 120);
+          await tester.pump();
+          await tester.pump(frame);
+          final mid = along(tester, Axis.vertical).pixels;
+          expect(mid, greaterThan(0));
+          expect(mid, lessThan(120));
+
+          await tester.pumpAndSettle();
+          expect(along(tester, Axis.vertical).pixels, 120);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('Shift+휠은 가로로 미끄러진다', (tester) async {
+        await pump(tester, SyntaxText(long));
+        final horizontal = along(tester, Axis.horizontal);
+        final target = math.min(60.0, horizontal.maxScrollExtent);
+        expect(target, greaterThan(16), reason: '가로로 움직일 여지가 없다');
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        try {
+          await wheel(
+            tester,
+            tester.getCenter(find.byType(SyntaxText)),
+            target,
+          );
+          await tester.pump();
+          await tester.pump(frame);
+          final mid = horizontal.pixels;
+          expect(mid, greaterThan(0));
+          expect(mid, lessThan(target));
+
+          await tester.pumpAndSettle();
+          expect(horizontal.pixels, target);
+          expect(along(tester, Axis.vertical).pixels, 0);
+        } finally {
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        }
+      });
     });
 
     testWidgets('컨트롤러는 트리와 함께 정리된다', (tester) async {
