@@ -72,7 +72,7 @@ flutter create --platforms=android,ios,windows,linux .
 ## 테스트가 없는 이유
 
 루트에서 돌리는 `flutter test`는 이 디렉터리를 **돌지 않는다**(실패하는 테스트를
-심어 확인함 — 116개 그대로 통과). 여기에 테스트를 두면 아무도 돌리지 않는 테스트가
+심어 확인함 — 그때 루트의 116개가 그대로 통과했다). 여기에 테스트를 두면 아무도 돌리지 않는 테스트가
 되고, 그것은 없느니만 못하다.
 
 컴파일은 덮인다 — 루트의 `flutter analyze`가 이 디렉터리까지 본다. 오류를 심어
@@ -80,5 +80,6 @@ flutter create --platforms=android,ios,windows,linux .
 그것이 커버리지의 이유라고 적어 두었는데, 워크스페이스를 지우고 다시 재 보니
 똑같이 잡혔다. 거짓 정당화였고, 워크스페이스는 뺐다.
 
-`dart format`은 이 디렉터리를 보지 않는다. 게이트 문구가 `lib test`이기 때문이고,
-그 범위를 넓힐지는 릴리스 티켓이 정한다.
+`dart format`도 덮인다. 게이트가 `lib test example/lib`이다 — 처음에는 `lib test`라
+이 디렉터리가 빠져 있었고, #21이 넓혔다. 이 코드는 pub.dev의 example 탭에 그대로
+실려 소비자가 읽는다.
