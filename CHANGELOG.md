@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0
+
+On Android, the horizontal scrollbar of `SyntaxText` can now be dragged. Before
+this, touch users there had no way to scroll sideways: dragging over the text
+selects it, and the scrollbar was hidden and ignored drags.
+
+- On Android, the horizontal scrollbar is always shown and draggable, unless
+  your app's `ScrollbarThemeData` sets `thumbVisibility` or `interactive`. A
+  value you set wins, even `false`. The vertical scrollbar is unchanged, and
+  other platforms are unchanged.
+- Because the bar is now interactive on Android, tapping along it also pages
+  the code sideways. Flutter's scrollbar cannot allow dragging without that.
+- With `scrollable: true`, the horizontal scrollbar is now drawn at the bottom
+  of the widget on every platform, instead of after the last line of code.
+- A palette with a background no longer replaces your app's scrollbar theme. It
+  sets only the thumb color, and keeps the rest of your `ScrollbarThemeData`.
+
 ## 0.3.0
 
 `SyntaxText` now glides on a mouse wheel instead of jumping a notch at a time.

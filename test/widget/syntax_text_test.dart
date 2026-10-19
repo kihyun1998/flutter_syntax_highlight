@@ -502,14 +502,190 @@ void main() {
       await tester.pumpAndSettle();
       expect(horizontal.controller!.position.pixels, 0);
 
-      // 그리고 **가로** 스크롤바가 실제로 거기 있다. `findsWidgets`로는 부족하다 —
-      // 세로 것 하나만 남아도 통과해 버린다.
-      final bars = tester.widgetList<Scrollbar>(find.byType(Scrollbar));
-      expect(
-        bars.map((b) => b.controller),
-        contains(horizontal.controller),
-        reason: '가로 스크롤바가 없다 — 터치에서 가로로 넘길 방법이 사라졌다',
+      // 그 스크롤바가 있는 것만으로는 부족하다 — Android에서는 있어도 끌리지
+      // 않았다(#29). 끌리는지는 아래 그룹이 잰다.
+    });
+
+    group('가로 스크롤바는 터치에서 끌린다', () {
+      // 위의 검사가 말하는 "유일한 어포던스"가 실제로 쓸 수 있는 것인지를 잰다.
+      // Material `Scrollbar`는 Android에서만 `interactive`의 기본값이 false이고,
+      // thumb은 스크롤할 때만 나타나며 투명하면 히트를 받지 않는다. 가로를
+      // 스크롤할 길이 그 thumb뿐이라 기본값 그대로는 처음 보이게 할 수 없다.
+      // (#29, ADR-0004)
+      ScrollController horizontalOf(WidgetTester tester) => tester
+          .widget<SingleChildScrollView>(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is SingleChildScrollView &&
+                  w.scrollDirection == Axis.horizontal,
+            ),
+          )
+          .controller!;
+
+      /// [controller]를 그리는 바.
+      Finder barOf(ScrollController controller) => find.byWidgetPredicate(
+        (w) => w is Scrollbar && w.controller == controller,
       );
+
+      /// 위젯 영역의 바닥, 왼쪽 끝 근처 — 가로 thumb이 그려져야 하는 자리다.
+      /// 세로를 움직이지 않는다. 바가 내용 끝에 그려지면 여기에는 없다.
+      Future<void> dragThumb(WidgetTester tester) async {
+        final box = tester.getRect(find.byType(SyntaxText));
+        await tester.dragFrom(
+          Offset(box.left + 30, box.bottom - 2),
+          const Offset(140, 0),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      for (final scrollable in [false, true]) {
+        for (final (name, palette) in [
+          ('파생 기본', null),
+          ('배경 있는 프리셋', SyntaxPalette.oneDark),
+        ]) {
+          testWidgets('android, scrollable: $scrollable, $name', (
+            tester,
+          ) async {
+            await pump(
+              tester,
+              SyntaxText(long, scrollable: scrollable, palette: palette),
+            );
+            await dragThumb(tester);
+            expect(horizontalOf(tester).position.pixels, greaterThan(0));
+          });
+        }
+      }
+
+      testWidgets('배경 있는 프리셋이 앱의 스크롤바 테마를 지우지 않는다', (tester) async {
+        // 색만 팔레트가 정한다. 나머지 필드는 앱의 것이 그대로 읽혀야 한다 —
+        // 통째로 갈아 끼우면 소비자가 바를 켜는 길이 프리셋에서만 막힌다.
+        const appThumb = Color(0xFFFF0000);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              scrollbarTheme: const ScrollbarThemeData(
+                thickness: WidgetStatePropertyAll(11),
+                thumbColor: WidgetStatePropertyAll(appThumb),
+              ),
+            ),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: SyntaxText(long, palette: SyntaxPalette.oneDark),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final bars = ScrollbarTheme.of(
+          tester.element(barOf(horizontalOf(tester))),
+        );
+        expect(bars.thickness?.resolve({}), 11);
+        final thumb = bars.thumbColor?.resolve({});
+        expect(thumb, isNot(appThumb));
+        expect(
+          thumb?.withAlpha(255),
+          SyntaxPalette.oneDark.comment!.color!.withAlpha(255),
+          reason: 'thumb 색은 프리셋의 배경 위에서 고른 팔레트 색이어야 한다',
+        );
+      });
+
+      testWidgets('android에서 바 자리를 탭하면 한 페이지 넘어간다', (tester) async {
+        // `interactive`를 켜면 Flutter의 track 탭도 같이 켜진다. 따로 끌 수 없어
+        // 대가로 받아들였다(ADR-0004). 이 띠의 터치는 텍스트에 닿지 않는다.
+        await pump(tester, SyntaxText(long));
+        final box = tester.getRect(find.byType(SyntaxText));
+        await tester.tapAt(Offset(box.center.dx + 100, box.bottom - 2));
+        await tester.pumpAndSettle();
+        expect(horizontalOf(tester).position.pixels, greaterThan(0));
+      });
+
+      testWidgets('바가 맨 바깥에 늘 떠 있어도 길게 누르면 선택된다', (tester) async {
+        await pump(tester, SyntaxText(long));
+        await tester.longPressAt(tester.getCenter(find.byType(SyntaxText)));
+        await tester.pumpAndSettle();
+        final selection = tester
+            .state<EditableTextState>(find.byType(EditableText))
+            .textEditingValue
+            .selection;
+        expect(selection.isCollapsed, isFalse);
+      });
+
+      testWidgets('scrollable: true여도 가로 바는 위젯 영역 바닥에 있다', (tester) async {
+        await pump(tester, SyntaxText(long));
+        expect(
+          tester.getRect(barOf(horizontalOf(tester))).bottom,
+          lessThanOrEqualTo(tester.getRect(find.byType(SyntaxText)).bottom),
+          reason: '가로 바가 내용 끝에 그려진다 — 세로를 끝까지 내려야 보인다',
+        );
+      });
+
+      /// [controller]의 바가 늘 보이는지. Material `Scrollbar`가 푸는 순서 그대로
+      /// — 위젯 파라미터, 그다음 가장 가까운 테마, 없으면 false.
+      bool alwaysShown(WidgetTester tester, ScrollController controller) {
+        final finder = barOf(controller);
+        return tester.widget<Scrollbar>(finder).thumbVisibility ??
+            ScrollbarTheme.of(
+              tester.element(finder),
+            ).thumbVisibility?.resolve({}) ??
+            false;
+      }
+
+      testWidgets('앱이 thumbVisibility: false를 주면 그것이 이긴다', (tester) async {
+        // 위젯은 아무도 정하지 않은 값만 채운다. 앱이 끄면 터치에서 가로로 넘길
+        // 길이 사라지지만, 그것은 앱이 고른 것이다.
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(
+              scrollbarTheme: const ScrollbarThemeData(
+                thumbVisibility: WidgetStatePropertyAll(false),
+              ),
+            ),
+            home: Scaffold(
+              body: SizedBox(
+                width: 400,
+                height: 300,
+                child: SyntaxText(long, scrollable: false),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(alwaysShown(tester, horizontalOf(tester)), isFalse);
+        await dragThumb(tester);
+        expect(horizontalOf(tester).position.pixels, 0);
+      });
+
+      testWidgets('android가 아니면 채우지 않는다', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          await pump(tester, SyntaxText(long));
+          final bar = tester.widget<Scrollbar>(barOf(horizontalOf(tester)));
+          expect(bar.thumbVisibility, isNull);
+          expect(bar.interactive, isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('세로 바는 android에서도 그대로다', (tester) async {
+        // 기본값은 가로 바에만 채운다. 세로는 끌어서 넘어가므로 바가 늘 보일
+        // 이유가 없다.
+        await pump(tester, SyntaxText(long));
+        final vertical = tester
+            .widget<SingleChildScrollView>(
+              find.byWidgetPredicate(
+                (w) =>
+                    w is SingleChildScrollView &&
+                    w.scrollDirection == Axis.vertical,
+              ),
+            )
+            .controller!;
+        expect(alwaysShown(tester, vertical), isFalse);
+        expect(alwaysShown(tester, horizontalOf(tester)), isTrue);
+      });
     });
 
     group('마우스 휠은 미끄러진다', () {

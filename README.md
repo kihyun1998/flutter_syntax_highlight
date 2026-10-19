@@ -208,7 +208,10 @@ SyntaxText(
   `true` scrolls within its own box.
 - **Dragging sideways over the text does not scroll it** — the selection gesture
   takes horizontal drags. The scrollbar is the sideways affordance on touch; on
-  desktop, trackpad and wheel work.
+  desktop, trackpad and wheel work. On Android, where a Material scrollbar is
+  hidden and not draggable by default, `SyntaxText` shows its horizontal bar and
+  makes it draggable unless your `ScrollbarThemeData` sets `thumbVisibility` or
+  `interactive` itself — a value you set wins.
 - **A mouse wheel glides instead of jumping.** Each notch animates to its
   target, on both axes (Shift+wheel for sideways), and never passes the ends.
   `wheelMotion` picks how — `WheelMotion.spring` (the default), `.curve`,

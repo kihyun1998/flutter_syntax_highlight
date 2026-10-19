@@ -52,6 +52,24 @@ import 'syntax_palette.dart';
 /// 데스크톱에서는 트랙패드와 휠도 쓸 수 있다. 이 위젯에서 스크롤바를 걷어내려는
 /// 사람은 이 문단을 먼저 읽어야 한다.
 ///
+/// **Android에서는 그 바를 위젯이 켠다.** Material [Scrollbar]는 Android에서만
+/// `interactive`의 기본값이 false이고, thumb은 스크롤할 때만 나타나며 투명하면
+/// 히트를 받지 않는다 — 가로를 스크롤할 길이 그 thumb뿐이라, 기본값 그대로는
+/// 처음 보이게 할 방법이 없었다(#29). 그래서 Android에서 앱의
+/// [ScrollbarThemeData]가 `thumbVisibility`나 `interactive`를 정하지 않았으면 가로
+/// 바에 한해 `true`로 채운다. 세로 바는 끌어서 넘어가므로 건드리지 않는다.
+/// `interactive`를 켜면 바 자리를 **탭해도** 한 페이지 넘어간다 — Material
+/// [Scrollbar]는 드래그와 track 탭을 따로 끌 수 없어서, 그 대가로 받아들였다.
+///
+/// **앱이 정한 값이 이긴다.** 앱 테마에서 `thumbVisibility: false`나
+/// `interactive: false`를 주면 위젯은 그것을 바꾸지 않고, 그러면 Android 터치
+/// 사용자는 가로로 넘길 방법이 없다. 배경을 주는 팔레트도 thumb **색**만 덮고
+/// 앱의 나머지 스크롤바 테마는 그대로 둔다(ADR-0004).
+///
+/// 가로 바는 세로 스크롤 뷰보다 바깥에 있어 `scrollable`과 상관없이 위젯 영역의
+/// 바닥에 그려진다. 위젯이 화면 맨 아래에 놓여 그 바닥이 시스템 제스처 영역에
+/// 걸리는 것은 이 위젯이 알 수 없으므로, 피하는 것은 앱의 몫이다([SafeArea] 등).
+///
 /// ## 마우스 휠은 미끄러진다
 ///
 /// 두 컨트롤러는 `flutter_smooth_wheel_scroll`의 `SmoothScrollController`다. 휠
@@ -272,7 +290,8 @@ class _SyntaxTextState extends State<SyntaxText> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final palette = widget.palette ?? SyntaxPalette.fromColorScheme(scheme);
 
     final family = widget.fontFamily ?? SyntaxText.defaultMonoFamily;
@@ -300,13 +319,10 @@ class _SyntaxTextState extends State<SyntaxText> {
     code = Padding(padding: widget.padding, child: code);
 
     // 가로는 언제나. 줄바꿈된 줄은 다른 줄이다.
-    code = Scrollbar(
+    code = SingleChildScrollView(
       controller: _horizontal,
-      child: SingleChildScrollView(
-        controller: _horizontal,
-        scrollDirection: Axis.horizontal,
-        child: code,
-      ),
+      scrollDirection: Axis.horizontal,
+      child: code,
     );
 
     if (widget.scrollable) {
@@ -315,6 +331,21 @@ class _SyntaxTextState extends State<SyntaxText> {
         child: SingleChildScrollView(controller: _vertical, child: code),
       );
     }
+
+    // 소비자가 정하지 않은 것만 채운다(ADR-0004). 테마가 아니라 가로 바의
+    // 파라미터로 넘기는 것은, 테마로 채우면 세로 바까지 늘 보이게 되기 때문이다.
+    final bars = ScrollbarTheme.of(context);
+    final android = theme.platform == TargetPlatform.android;
+
+    // 가로 바는 세로 뷰보다 **바깥**이다. 안에 두면 가로 뷰의 높이가 내용 전체의
+    // 높이라 바가 내용 맨 끝에 그려지고, 세로를 끝까지 내려야 보인다.
+    code = Scrollbar(
+      controller: _horizontal,
+      notificationPredicate: (n) => n.depth == (widget.scrollable ? 1 : 0),
+      thumbVisibility: android && bars.thumbVisibility == null ? true : null,
+      interactive: android && bars.interactive == null ? true : null,
+      child: code,
+    );
 
     final background = palette.background;
 
@@ -364,9 +395,10 @@ class _SyntaxTextState extends State<SyntaxText> {
     code = ColoredBox(color: background, child: code);
 
     // 스크롤바는 터치에서 유일한 가로 어포던스다. 이 위젯의 doc이 그렇게 적어
-    // 두었으므로, 배경을 바꾸면서 그것을 배경에 묻히게 둘 수 없다.
+    // 두었으므로, 배경을 바꾸면서 그것을 배경에 묻히게 둘 수 없다. 색만 덮고 앱의
+    // 나머지 필드는 남긴다 — 테마는 합쳐지지 않고 가장 가까운 것 하나만 읽힌다.
     return ScrollbarTheme(
-      data: ScrollbarThemeData(
+      data: bars.copyWith(
         thumbColor: WidgetStatePropertyAll(chrome.withAlpha(115)),
       ),
       child: code,
