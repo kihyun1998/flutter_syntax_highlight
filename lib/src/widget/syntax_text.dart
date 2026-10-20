@@ -72,6 +72,10 @@ import 'syntax_palette.dart';
 /// 제스처 영역에 걸리는 것은 이 위젯이 알 수 없으므로, 피하는 것은 앱의
 /// 몫이다([SafeArea] 등).
 ///
+/// 데스크톱에서 Material이 세로 스크롤 뷰에 자동으로 붙이는 바는 세로 뷰에서 끈다.
+/// 위의 세로 바와 같은 것을 한 번 더 그리기 때문이다(#32). 앱의 나머지
+/// [ScrollBehavior]는 그대로 걸린다.
+///
 /// ## 마우스 휠은 미끄러진다
 ///
 /// 두 컨트롤러는 `flutter_smooth_wheel_scroll`의 `SmoothScrollController`다. 휠
@@ -351,9 +355,16 @@ class _SyntaxTextState extends State<SyntaxText> {
         );
 
     if (widget.scrollable) {
+      // 데스크톱에서 Material은 세로 [Scrollable]마다 바를 하나 더 붙인다. 바로
+      // 위의 바와 같은 컨트롤러를 그려 thumb이 두 번 칠해지므로, 이 뷰에서만
+      // 끄고 앱의 나머지 [ScrollBehavior]는 물려받는다(#32). [EditableText]는
+      // 자기 바를 스스로 다시 켜므로 여기에 걸리지 않는다.
       code = insetFree(
         (child) => Scrollbar(controller: _vertical, child: child),
-        SingleChildScrollView(controller: _vertical, child: code),
+        ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: SingleChildScrollView(controller: _vertical, child: code),
+        ),
       );
     }
 

@@ -50,6 +50,10 @@
 
 [#31](https://github.com/kihyun1998/flutter_syntax_highlight/issues/31)에서 메인테이너가 정했다(2026-10-20): **두 바 모두, 네 방향 모두** 그 padding을 지운다. 위 문단의 "inset은 앱의 일"을 그대로 따른 것이다 — 화면 기준 inset은 자기 위치를 모르는 위젯의 바에게 어느 방향이든 틀린 값이다. 함께 제시된 대안은 "가로 바의 bottom만"(이슈의 첫 단계)과 "가로 바의 네 방향"이었다. 고를 때 세로 바가 어떻게 바뀌는지는 재지 않았다. 지금은 위젯 테스트가 그것을 고정한다(네 방향 24일 때 세로 track이 위아래 끝까지 닿는다). 위젯은 바 둘레에서만 padding을 지우고, 그 안의 코드에는 바깥 `MediaQuery`를 되돌려 준다. 선택 툴바와 핸들은 화면의 inset을 봐야 하기 때문이다.
 
+**데스크톱의 자동 세로 바는 세로 뷰에서만 끈다.** Material의 `MaterialScrollBehavior.buildScrollbar`는 데스크톱에서 세로 `Scrollable`마다 `Scrollbar`를 붙인다. 그래서 `scrollable: true`에서는 세로 뷰에 이 위젯의 바와 같은 컨트롤러를 그리는 바가 하나 더 있었고, 스크롤하면 둘 다 보였다(widget test, windows, 400×300, 80줄: 바 4개 중 둘이 `_vertical`, 2026-10-20). 세로 뷰를 `ScrollConfiguration.of(context).copyWith(scrollbars: false)`로 감싼다. 새 `ScrollBehavior`가 아니라 앱의 것을 복사하므로 `dragDevices` 같은 앱의 나머지 설정은 그대로 걸린다.
+
+`SelectableText` 안쪽 `EditableText`의 자동 바는 남긴다. `EditableText`는 바깥 behavior를 `copyWith(scrollbars: _isMultiline)`으로 다시 켜므로 위 감싸기에 걸리지 않는다(Flutter 3.41.9 `widgets/editable_text.dart`). 정상 사용에서는 스크롤할 길이가 0이라 보이지 않는다. `scrollable: false`를 높이가 정해진 자리에 넣으면 `EditableText`가 자기 안에서 스크롤하는데(같은 조건에서 max 1172), 그때 데스크톱에서 보이는 세로 바는 이것 하나뿐이다. [#32](https://github.com/kihyun1998/flutter_syntax_highlight/issues/32)에서 메인테이너가 정했다(2026-10-20): **중복된 바만 끈다.** 함께 제시된 대안은 `SelectableText.scrollBehavior`로 이 바까지 끄는 것이었고, 그 대가로 위 경우의 세로 바가 데스크톱에서도 사라진다는 것(지금의 Android와 같다)이 함께 제시됐다. 테스트가 이 바가 남는 것을 고정한다.
+
 **시스템 제스처 영역은 앱 레이어의 일이다.** 위젯이 화면 맨 아래에 놓이면 thumb이 그 영역에 걸린다. 에뮬레이터에서는 그 자리의 드래그가 일부만 전달됐다(30.8, 77.1 / 127). 위젯은 자기가 화면 어디에 놓였는지 모르므로 `systemGestureInsets`를 읽어 피하지 않는다. doc에 적는다.
 
 **ADR-0002의 "위젯 자신의 컨트롤도 팔레트를 따라간다"를 좁힌다.** 따라가는 것은 **색**이다. 그 문장을 테마를 통째로 갈아 끼우는 것으로 구현한 것이, 프리셋 아래에서 소비자의 opt-in이 0.0이 된 이유다.

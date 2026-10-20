@@ -20,6 +20,11 @@ selects it, and the scrollbar was hidden and ignored drags.
   bottom inset, and the vertical bar's track was shortened by the top and bottom
   insets. Keeping the widget out of the system areas is your app's job, for
   example with `SafeArea`. Text selection still sees the insets.
+- On desktop, with `scrollable: true`, the vertical scrollbar is no longer drawn
+  twice. Material adds its own scrollbar to vertical scroll views on desktop,
+  and it tracked the same position as the widget's. The widget now turns that
+  one off for its vertical view only, and keeps the rest of your app's
+  `ScrollBehavior`.
 - A palette with a background no longer replaces your app's scrollbar theme. It
   sets only the thumb color, and keeps the rest of your `ScrollbarThemeData`.
 

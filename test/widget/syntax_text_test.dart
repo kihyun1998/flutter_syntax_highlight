@@ -834,6 +834,76 @@ void main() {
       });
     });
 
+    group('데스크톱에서 세로 바는 하나다', () {
+      // Material의 `MaterialScrollBehavior.buildScrollbar`는 데스크톱에서 세로
+      // `Scrollable`마다 바를 하나 더 붙인다. 이 위젯이 이미 단 바와 같은
+      // 컨트롤러를 그려 thumb이 두 번 칠해졌다(#32).
+
+      testWidgets('세로 뷰에는 이 위젯의 바만 붙는다', (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          await pump(tester, SyntaxText(long));
+          expect(barOf(scrollOf(tester, Axis.vertical)), findsOneWidget);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('EditableText 안쪽의 자동 바는 그대로 둔다', (tester) async {
+        // `scrollable: false`를 높이가 정해진 자리에 넣으면 `EditableText`가
+        // 자기 안에서 세로로 스크롤한다. 그때 데스크톱에서 보이는 세로 바는 이
+        // 자동 바 하나뿐이라 지우지 않는다(#32에서 메인테이너가 정함).
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          await pump(tester, SyntaxText(long, scrollable: false));
+          final inner = tester
+              .state<ScrollableState>(
+                find.descendant(
+                  of: find.byType(EditableText),
+                  matching: find.byType(Scrollable),
+                ),
+              )
+              .position;
+          expect(inner.maxScrollExtent, greaterThan(0));
+          expect(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is Scrollbar &&
+                  (w.controller?.positions.contains(inner) ?? false),
+            ),
+            findsOneWidget,
+          );
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('앱의 ScrollBehavior는 세로 뷰에도 그대로 걸린다', (tester) async {
+        // 바만 끄고 나머지는 앱의 것을 물려받는다. 새 `ScrollBehavior`를 끼우면
+        // 앱이 정한 `dragDevices`가 사라져 터치가 다시 스크롤한다.
+        await tester.pumpWidget(
+          MaterialApp(
+            scrollBehavior: const MaterialScrollBehavior().copyWith(
+              dragDevices: {PointerDeviceKind.mouse},
+            ),
+            home: Scaffold(
+              body: SizedBox(width: 400, height: 300, child: SyntaxText(long)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final vertical = scrollOf(tester, Axis.vertical);
+        expect(vertical.position.maxScrollExtent, greaterThan(0));
+
+        await tester.dragFrom(
+          tester.getCenter(find.byType(SyntaxText)),
+          const Offset(0, -120),
+        );
+        await tester.pumpAndSettle();
+        expect(vertical.position.pixels, 0);
+      });
+    });
+
     group('마우스 휠은 미끄러진다', () {
       const frame = Duration(milliseconds: 16);
 
