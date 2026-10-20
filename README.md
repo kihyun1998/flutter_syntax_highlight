@@ -15,7 +15,7 @@ On the `return` line, inside `'${value ? '✓' : '✗'}'`: the nested `'✓'` an
 
 ```yaml
 dependencies:
-  flutter_syntax_highlight: ^0.3.0
+  flutter_syntax_highlight: ^0.4.0
 ```
 
 ```dart
@@ -211,7 +211,9 @@ SyntaxText(
   desktop, trackpad and wheel work. On Android, where a Material scrollbar is
   hidden and not draggable by default, `SyntaxText` shows its horizontal bar and
   makes it draggable unless your `ScrollbarThemeData` sets `thumbVisibility` or
-  `interactive` itself — a value you set wins.
+  `interactive` itself — a value you set wins. Both scrollbars sit at the edges
+  of the widget and ignore the screen's insets, so keeping the widget clear of
+  system areas is your app's job, for example with `SafeArea`.
 - **A mouse wheel glides instead of jumping.** Each notch animates to its
   target, on both axes (Shift+wheel for sideways), and never passes the ends.
   `wheelMotion` picks how — `WheelMotion.spring` (the default), `.curve`,
