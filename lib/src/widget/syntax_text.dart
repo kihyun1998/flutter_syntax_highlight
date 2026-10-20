@@ -67,8 +67,10 @@ import 'syntax_palette.dart';
 /// 앱의 나머지 스크롤바 테마는 그대로 둔다(ADR-0004).
 ///
 /// 가로 바는 세로 스크롤 뷰보다 바깥에 있어 `scrollable`과 상관없이 위젯 영역의
-/// 바닥에 그려진다. 위젯이 화면 맨 아래에 놓여 그 바닥이 시스템 제스처 영역에
-/// 걸리는 것은 이 위젯이 알 수 없으므로, 피하는 것은 앱의 몫이다([SafeArea] 등).
+/// 바닥에 그려진다. 두 바 모두 화면 inset(`MediaQuery`의 padding)을 따르지 않고
+/// 위젯 영역의 끝에 붙는다(#31). 위젯이 화면 맨 아래에 놓여 그 바닥이 시스템
+/// 제스처 영역에 걸리는 것은 이 위젯이 알 수 없으므로, 피하는 것은 앱의
+/// 몫이다([SafeArea] 등).
 ///
 /// ## 마우스 휠은 미끄러진다
 ///
@@ -325,10 +327,33 @@ class _SyntaxTextState extends State<SyntaxText> {
       child: code,
     );
 
+    // Material [Scrollbar]는 painter에 `MediaQuery.paddingOf`를 그대로 넣고 끌
+    // 파라미터가 없다. 그 값은 **화면**의 inset인데 바는 이 위젯 영역 안에
+    // 그려지므로, 위젯이 화면 중간에 있어도 바가 그만큼 안으로 밀려 마지막 줄에
+    // 겹쳤다(#31). 바에게만 inset을 지우고, 그 안의 코드에는 되돌려 준다 — 선택
+    // 툴바와 핸들은 화면의 inset을 봐야 한다. inset을 피하는 것은 앱의
+    // 몫이다(ADR-0004). [Builder] 안에서 읽는 것은, 여기서 읽으면 키보드가
+    // 오르내리는 매 프레임 이 위젯 전체가 다시 지어지기 때문이다.
+    Widget insetFree(Widget Function(Widget child) bar, Widget child) =>
+        Builder(
+          builder: (context) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.removePadding(
+                removeLeft: true,
+                removeTop: true,
+                removeRight: true,
+                removeBottom: true,
+              ),
+              child: bar(MediaQuery(data: media, child: child)),
+            );
+          },
+        );
+
     if (widget.scrollable) {
-      code = Scrollbar(
-        controller: _vertical,
-        child: SingleChildScrollView(controller: _vertical, child: code),
+      code = insetFree(
+        (child) => Scrollbar(controller: _vertical, child: child),
+        SingleChildScrollView(controller: _vertical, child: code),
       );
     }
 
@@ -339,12 +364,15 @@ class _SyntaxTextState extends State<SyntaxText> {
 
     // 가로 바는 세로 뷰보다 **바깥**이다. 안에 두면 가로 뷰의 높이가 내용 전체의
     // 높이라 바가 내용 맨 끝에 그려지고, 세로를 끝까지 내려야 보인다.
-    code = Scrollbar(
-      controller: _horizontal,
-      notificationPredicate: (n) => n.depth == (widget.scrollable ? 1 : 0),
-      thumbVisibility: android && bars.thumbVisibility == null ? true : null,
-      interactive: android && bars.interactive == null ? true : null,
-      child: code,
+    code = insetFree(
+      (child) => Scrollbar(
+        controller: _horizontal,
+        notificationPredicate: (n) => n.depth == (widget.scrollable ? 1 : 0),
+        thumbVisibility: android && bars.thumbVisibility == null ? true : null,
+        interactive: android && bars.interactive == null ? true : null,
+        child: child,
+      ),
+      code,
     );
 
     final background = palette.background;

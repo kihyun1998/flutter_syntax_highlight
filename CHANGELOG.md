@@ -14,6 +14,12 @@ selects it, and the scrollbar was hidden and ignored drags.
   the code sideways. Flutter's scrollbar cannot allow dragging without that.
 - With `scrollable: true`, the horizontal scrollbar is now drawn at the bottom
   of the widget on every platform, instead of after the last line of code.
+- Both scrollbars now sit at the edges of the widget, and ignore the screen's
+  insets (`MediaQuery` padding). Before this, a widget in the middle of a phone
+  screen drew its horizontal bar over the last line of code, raised by the
+  bottom inset, and the vertical bar's track was shortened by the top and bottom
+  insets. Keeping the widget out of the system areas is your app's job, for
+  example with `SafeArea`. Text selection still sees the insets.
 - A palette with a background no longer replaces your app's scrollbar theme. It
   sets only the thumb color, and keeps the rest of your `ScrollbarThemeData`.
 

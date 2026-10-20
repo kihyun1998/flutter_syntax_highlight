@@ -456,6 +456,22 @@ void main() {
           "final variable\$i = 'a rather long string literal number \$i here';",
     ).join('\n');
 
+    ScrollController scrollOf(WidgetTester tester, Axis axis) => tester
+        .widget<SingleChildScrollView>(
+          find.byWidgetPredicate(
+            (w) => w is SingleChildScrollView && w.scrollDirection == axis,
+          ),
+        )
+        .controller!;
+
+    ScrollController horizontalOf(WidgetTester tester) =>
+        scrollOf(tester, Axis.horizontal);
+
+    /// [controller]를 그리는 바.
+    Finder barOf(ScrollController controller) => find.byWidgetPredicate(
+      (w) => w is Scrollbar && w.controller == controller,
+    );
+
     testWidgets('세로는 끌어서 넘어간다', (tester) async {
       await pump(tester, SyntaxText(long));
       final vertical = tester.widget<SingleChildScrollView>(
@@ -512,20 +528,6 @@ void main() {
       // thumb은 스크롤할 때만 나타나며 투명하면 히트를 받지 않는다. 가로를
       // 스크롤할 길이 그 thumb뿐이라 기본값 그대로는 처음 보이게 할 수 없다.
       // (#29, ADR-0004)
-      ScrollController horizontalOf(WidgetTester tester) => tester
-          .widget<SingleChildScrollView>(
-            find.byWidgetPredicate(
-              (w) =>
-                  w is SingleChildScrollView &&
-                  w.scrollDirection == Axis.horizontal,
-            ),
-          )
-          .controller!;
-
-      /// [controller]를 그리는 바.
-      Finder barOf(ScrollController controller) => find.byWidgetPredicate(
-        (w) => w is Scrollbar && w.controller == controller,
-      );
 
       /// 위젯 영역의 바닥, 왼쪽 끝 근처 — 가로 thumb이 그려져야 하는 자리다.
       /// 세로를 움직이지 않는다. 바가 내용 끝에 그려지면 여기에는 없다.
@@ -685,6 +687,150 @@ void main() {
             .controller!;
         expect(alwaysShown(tester, vertical), isFalse);
         expect(alwaysShown(tester, horizontalOf(tester)), isTrue);
+      });
+    });
+
+    group('스크롤바는 화면 inset이 아니라 위젯 영역을 따른다', () {
+      // Material `Scrollbar`는 painter에 `MediaQuery.paddingOf`를 그대로 넣는다.
+      // 그 값은 **화면**의 inset인데 바는 위젯 영역 안에 그려지므로, 위젯이 화면
+      // 중간에 있어도 바가 그만큼 안으로 밀려 마지막 줄에 겹쳤다(#31). 위젯
+      // 테스트의 기본 padding은 0이라, 여기서는 직접 준다.
+      const inset = EdgeInsets.all(24);
+
+      Future<void> pumpInset(
+        WidgetTester tester,
+        Widget child, {
+        ScrollbarThemeData? bars,
+      }) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: ThemeData(scrollbarTheme: bars),
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 400,
+                  height: 300,
+                  child: Builder(
+                    builder: (context) => MediaQuery(
+                      data: MediaQuery.of(context).copyWith(padding: inset),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      /// [controller]의 바가 화면 좌표 [at]에서 자기 track에 닿는지. 그려진
+      /// track 그 자체를 묻는다 — 터치 hit 영역은 thumb 둘레로 반경 24까지
+      /// 넓어져서, 드래그로는 24만큼 밀린 바도 맞는다.
+      bool covers(WidgetTester tester, ScrollController controller, Offset at) {
+        final finder = find
+            .descendant(
+              of: barOf(controller),
+              matching: find.byWidgetPredicate(
+                (w) =>
+                    w is CustomPaint && w.foregroundPainter is ScrollbarPainter,
+              ),
+            )
+            .first;
+        final painter =
+            tester.widget<CustomPaint>(finder).foregroundPainter!
+                as ScrollbarPainter;
+        return painter.hitTest(at - tester.getTopLeft(finder)) ?? false;
+      }
+
+      for (final scrollable in [false, true]) {
+        testWidgets('가로 바는 위젯 바닥에, 양 끝까지 — scrollable: $scrollable', (
+          tester,
+        ) async {
+          await pumpInset(tester, SyntaxText(long, scrollable: scrollable));
+          final box = tester.getRect(find.byType(SyntaxText));
+          final bar = horizontalOf(tester);
+          expect(
+            covers(tester, bar, box.bottomCenter - const Offset(0, 1)),
+            isTrue,
+          );
+          expect(
+            covers(tester, bar, box.bottomCenter - const Offset(0, 26)),
+            isFalse,
+            reason: '바가 bottom inset만큼 올라가 마지막 줄 위에 있다',
+          );
+          expect(
+            covers(tester, bar, box.bottomLeft + const Offset(1, -1)),
+            isTrue,
+          );
+          expect(
+            covers(tester, bar, box.bottomRight - const Offset(1, 1)),
+            isTrue,
+          );
+        });
+      }
+
+      testWidgets('세로 바는 위젯 오른쪽 끝에, 위아래 끝까지', (tester) async {
+        // android에서 세로 바는 스크롤할 때만 보이고 `interactive`도 꺼져 있어,
+        // 그대로는 track이 히트를 받지 않는다. 앱 테마로 둘 다 켜서 잰다.
+        await pumpInset(
+          tester,
+          SyntaxText(long),
+          bars: const ScrollbarThemeData(
+            thumbVisibility: WidgetStatePropertyAll(true),
+            interactive: true,
+          ),
+        );
+        final box = tester.getRect(find.byType(SyntaxText));
+        final bar = scrollOf(tester, Axis.vertical);
+        expect(covers(tester, bar, box.topRight + const Offset(-1, 1)), isTrue);
+        expect(
+          covers(tester, bar, box.bottomRight - const Offset(1, 1)),
+          isTrue,
+        );
+        expect(
+          covers(tester, bar, box.centerRight - const Offset(26, 0)),
+          isFalse,
+          reason: '바가 right inset만큼 안으로 들어와 있다',
+        );
+      });
+
+      testWidgets('안의 코드는 여전히 화면 inset을 본다', (tester) async {
+        // 선택 툴바와 핸들은 화면 안에 머물려고 이 값을 읽는다. 지운 것은 바의
+        // 몫뿐이어야 한다.
+        await pumpInset(tester, SyntaxText(long));
+        expect(
+          MediaQuery.paddingOf(tester.element(find.byType(EditableText))),
+          inset,
+        );
+      });
+
+      testWidgets('키보드가 오르내려도 코드를 다시 짓지 않는다', (tester) async {
+        // inset을 지우려고 `MediaQuery`를 읽는 자리가 이 위젯의 build로 올라가면,
+        // 키보드 애니메이션의 매 프레임 모든 스팬을 다시 만든다. 다시 지었다면
+        // `SelectableText`가 새 인스턴스다. 위젯은 두 번 다 같은 인스턴스를
+        // 넘긴다 — 새로 만들면 그것만으로 다시 짓는다.
+        final code = SyntaxText(long);
+        Widget app(double keyboard) => MaterialApp(
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(viewInsets: EdgeInsets.only(bottom: keyboard)),
+              child: Scaffold(
+                resizeToAvoidBottomInset: false,
+                body: SizedBox(width: 400, height: 300, child: code),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpWidget(app(0));
+        final before = tester.widget(find.byType(SelectableText));
+        await tester.pumpWidget(app(100));
+        expect(
+          identical(tester.widget(find.byType(SelectableText)), before),
+          isTrue,
+        );
       });
     });
 

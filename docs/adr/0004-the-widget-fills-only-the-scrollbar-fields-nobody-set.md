@@ -46,7 +46,9 @@
 
 **`scrollable: true`에서 가로 바는 바깥에 둔다** (`notificationPredicate: depth == 1`). 세로 스크롤 뷰 안에 있으면 바가 내용 맨 끝(80줄이면 y≈1472)에 그려져, 끌 수 있어도 보이지 않는다.
 
-**바는 위젯 바닥보다 `MediaQuery`의 bottom padding만큼 위에 그려진다.** grilling에서는 "기본 `padding` 16이 Android thumb 4px를 감싸니 마지막 줄을 가리지 않는다"고 보고 따로 묻지 않았는데, 그 계산은 틀렸다. `RawScrollbar`는 `padding`을 주지 않으면 `MediaQuery.paddingOf(context)`를 쓰고, 위젯이 화면 중간에 있어도 그 값이 내려온다. 에뮬레이터(bottom padding 24)에서 바가 마지막 줄 글자 위에 겹쳤다(2026-10-19). 수정 전에도 같은 계산이었지만 Android에서는 바가 투명해 보이지 않았다. 어떻게 할지는 아직 정하지 않았다 — [#31](https://github.com/kihyun1998/flutter_syntax_highlight/issues/31), 0.4.0 전에 정한다.
+**바는 화면 inset을 따르지 않는다.** grilling에서는 "기본 `padding` 16이 Android thumb 4px를 감싸니 마지막 줄을 가리지 않는다"고 보고 따로 묻지 않았는데, 그 계산은 틀렸다. Material `Scrollbar`는 painter에 `MediaQuery.paddingOf(context)`를 그대로 넣고(Flutter 3.41.9 `material/scrollbar.dart`의 `updateScrollbarPainter`), 그것을 끌 파라미터가 없다. 위젯이 화면 중간에 있어도 그 값이 내려와, 에뮬레이터(bottom padding 24)에서 가로 바가 마지막 줄 글자 위에 겹쳤다(2026-10-19). 수정 전에도 같은 계산이었지만 Android에서는 바가 투명해 보이지 않았다.
+
+[#31](https://github.com/kihyun1998/flutter_syntax_highlight/issues/31)에서 메인테이너가 정했다(2026-10-20): **두 바 모두, 네 방향 모두** 그 padding을 지운다. 위 문단의 "inset은 앱의 일"을 그대로 따른 것이다 — 화면 기준 inset은 자기 위치를 모르는 위젯의 바에게 어느 방향이든 틀린 값이다. 함께 제시된 대안은 "가로 바의 bottom만"(이슈의 첫 단계)과 "가로 바의 네 방향"이었다. 고를 때 세로 바가 어떻게 바뀌는지는 재지 않았다. 지금은 위젯 테스트가 그것을 고정한다(네 방향 24일 때 세로 track이 위아래 끝까지 닿는다). 위젯은 바 둘레에서만 padding을 지우고, 그 안의 코드에는 바깥 `MediaQuery`를 되돌려 준다. 선택 툴바와 핸들은 화면의 inset을 봐야 하기 때문이다.
 
 **시스템 제스처 영역은 앱 레이어의 일이다.** 위젯이 화면 맨 아래에 놓이면 thumb이 그 영역에 걸린다. 에뮬레이터에서는 그 자리의 드래그가 일부만 전달됐다(30.8, 77.1 / 127). 위젯은 자기가 화면 어디에 놓였는지 모르므로 `systemGestureInsets`를 읽어 피하지 않는다. doc에 적는다.
 
