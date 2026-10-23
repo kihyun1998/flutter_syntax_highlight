@@ -6,14 +6,16 @@
 
 The gates walk `test/**.dart`. And the point of this corpus is **untame
 input** — it has to hold things that do not parse, such as an unclosed string
-or an unclosed interpolation. Keeping that as `.dart`:
+or an unclosed interpolation.
 
 Measured with the four files kept as `.dart`:
 
 ```
 dart format --output=none --set-exit-if-changed lib test   → 65
 flutter analyze                                            → 1  (18 issues, 16 errors)
-``` Making the corpus tame to get the gates to pass would be moving the
+```
+
+Making the corpus tame to get the gates to pass would be moving the
 threshold, so the extension moved instead.
 
 Why there are no line endings here is in the doc of `corpus_test.dart`.
