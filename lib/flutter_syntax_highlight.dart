@@ -1,20 +1,24 @@
-/// Dart 소스를 구문 강조해 그리는, 두 층으로 나뉜 패키지의 공개 진입점.
+/// The public entry point of a two-layer package that draws Dart source with
+/// syntax highlighting.
 ///
-/// 층을 가르는 것은 하나의 **이음매**다: **토크나이저**는 kind가 *무엇인지*를
-/// 정하고, **위젯**은 kind가 *어떻게 보이는지*를 정한다. 토크나이저가 `Color`를
-/// 아는 순간 두 층은 용접되고, 그러면 렌더링 없이는 아무것도 검증할 수 없게 된다.
+/// The layers are divided by a single **seam**: the **tokenizer** decides
+/// *what* a kind is, and the **widget** decides *how* a kind looks. The moment
+/// the tokenizer knows about `Color`, the two layers are welded together, and
+/// then nothing can be verified without rendering.
 ///
-/// 토크나이저가 돌려주는 것은 **partition**이다 — 토큰들의 텍스트를 이어 붙이면
-/// 입력과 바이트 단위로 같다. 용어는 `GLOSSARY.md`에, kind 목록의 근거는
-/// `docs/adr/0001-token-kinds-are-lexical-only.md`에 있다.
+/// What the tokenizer returns is a **partition**: concatenating the tokens'
+/// text gives back the input, byte for byte. The terms are in `GLOSSARY.md`,
+/// and the grounds for the list of kinds are in
+/// `docs/adr/0001-token-kinds-are-lexical-only.md`.
 ///
-/// 아래층만 필요하다면 [tokenizeDart]만 가져다 쓰면 된다.
+/// If you only need the lower layer, use [tokenizeDart] on its own.
 library;
 
 export 'src/tokenizer/dart_tokenizer.dart';
 export 'src/widget/syntax_palette.dart';
 export 'src/widget/syntax_text.dart';
 
-// `SyntaxText.wheelMotion`이 받는 타입. 이 import 하나로 쓸 수 있게 내보낸다.
+// The type `SyntaxText.wheelMotion` takes. Exported so this one import is
+// enough to use it.
 export 'package:flutter_smooth_wheel_scroll/flutter_smooth_wheel_scroll.dart'
     show WheelMotion;

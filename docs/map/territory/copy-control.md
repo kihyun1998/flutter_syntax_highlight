@@ -30,8 +30,8 @@ From the `SyntaxText.copyable` doc and `_SyntaxTextState`:
 - `lib/src/widget/syntax_text.dart — SyntaxText.copyable`, `copyTooltip`,
   `copiedTooltip`; `_SyntaxTextState._copy`, `_confirmation`, `_copied`,
   `didUpdateWidget`, `dispose`; the `Stack`/`Positioned` in `build`.
-- Tests: `test/widget/syntax_text_test.dart` group `복사 컨트롤`, and
-  `그리고 복사 컨트롤이 같은 것을 클립보드에 올린다`.
+- Tests: `test/widget/syntax_text_test.dart` group `copy control`, and
+  `and the copy control puts the same thing on the clipboard`.
 
 ## Reference behaviour
 

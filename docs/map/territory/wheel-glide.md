@@ -9,8 +9,7 @@ picks the motion; `null` moves at once.
 ## Governing decisions
 
 **None.** Introduced by #26/#27 (commits `ba491f3`, `82e8a29`, 2026-10-17); the
-rules are in the `SyntaxText.wheelMotion` doc and the class doc *마우스 휠은
-미끄러진다*.
+rules are in the `SyntaxText.wheelMotion` doc and the class doc *The mouse wheel glides*.
 
 ## Design model
 
@@ -34,7 +33,7 @@ From source only:
   `_SyntaxTextState._vertical`, `_horizontal`, `_instant`, `_motion`,
   `didUpdateWidget`, `dispose`.
 - `lib/flutter_syntax_highlight.dart` — `export … show WheelMotion`.
-- Tests: `test/widget/syntax_text_test.dart` groups `마우스 휠은 미끄러진다`,
+- Tests: `test/widget/syntax_text_test.dart` groups `the mouse wheel glides`,
   `wheelMotion`.
 
 ## Reference behaviour

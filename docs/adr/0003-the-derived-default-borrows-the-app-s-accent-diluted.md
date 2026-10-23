@@ -1,51 +1,51 @@
-# 파생 기본값이 앱의 accent를 희석해서 빌린다
+# The derived default borrows the app's accent, diluted
 
-`SyntaxPalette.fromColorScheme`이 이제 두 곳에서 앱의 강조색 쪽으로 당긴다. `string`(그리고 그것을 따라가는 `escape`)은 `onSurfaceVariant`에서 `tertiary` 쪽으로, `function`은 `onSurface`에서 `primary` 쪽으로, 각각 **0.70**만큼. `number`와 `punctuation`은 당기지 않는다.
+`SyntaxPalette.fromColorScheme` now pulls towards the app's accent colours in two places. `string` (and `escape`, which follows it) from `onSurfaceVariant` towards `tertiary`, and `function` from `onSurface` towards `primary`, each by **0.70**. `number` and `punctuation` are not pulled.
 
-이것은 [#17](https://github.com/kihyun1998/flutter_syntax_highlight/issues/17)의 수용 기준 하나를 뒤집는다 — *"`fromColorScheme`이 `onSurface` / `onSurfaceVariant` / `outline`만 쓴다."*
+This overturns one acceptance criterion of [#17](https://github.com/kihyun1998/flutter_syntax_highlight/issues/17) — *"`fromColorScheme` uses only `onSurface` / `onSurfaceVariant` / `outline`."*
 
-## 뒤집는 것은 구현 결정이지 원칙이 아니다
+## What is overturned is an implementation decision, not the principle
 
-원칙은 **"자기 색상을 도입하지 않는다"**였다. 세 역할만 읽는 것은 그것을 지키는 한 가지 방법이었고, 유일한 방법이 아니다.
+The principle was **"introduces no hue of its own"**. Reading only three roles was one way to keep it, not the only way.
 
-`scheme.primary`를 그대로 쓰면 코드 블록이 앱의 강조색을 통째로 입어 조용하려던 팔레트가 시끄러워진다. 그러나 **중성 역할에 앵커를 두고 거기서 얼마간만 벗어나면**, 들어오는 색상은 전부 앱의 것이고 이 패키지가 들여오는 것은 없다. 앱이 무채색이면 결과도 무채색이다 — 그 성질을 테스트가 잡는다.
+Using `scheme.primary` as is would dress the code block in the app's whole accent colour, and a palette meant to be quiet would turn loud. But **with the anchor on a neutral role and only a partial move away from it**, every hue that comes in is the app's, and this package brings in none. If the app is achromatic, the result is achromatic — a test catches that property.
 
-## 계수는 측정으로 골랐다
+## The coefficient was chosen by measurement
 
-눈금 둘이 이미 이 팔레트 안에 있었다. `fromSeed`를 색상환 12방향 × 라이트·다크로 스윕해서(2026-09-07) 잰 값이다:
+Two gauges were already inside this palette. These values were measured by sweeping `fromSeed` over 12 directions of the colour wheel × light and dark (2026-09-07):
 
-- `onSurfaceVariant` vs `onSurface` — **ΔE 9.9**. 이것이 `string`과 `plain`의 차이였고, 스크린샷을 잘라 보니 **거의 보이지 않았다.** README의 히어로 이미지가 바로 아래 캡션이 가리키는 것을 보여주지 못했다.
-- `outline` vs `onSurface` — **ΔE 29.9**. 이것은 확실히 보인다.
+- `onSurfaceVariant` vs `onSurface` — **ΔE 9.9**. This was the difference between `string` and `plain`, and cropping the screenshot showed it was **almost invisible.** The README's hero image could not show what the caption right below it pointed to.
+- `outline` vs `onSurface` — **ΔE 29.9**. This is clearly visible.
 
-`t = 0.70`에서 새로 생기는 구분은 전부 그 사이에 들어온다:
+At `t = 0.70`, every new distinction falls between the two:
 
-| | ΔE (색상환 전체 최솟값) |
+| | ΔE (minimum over the whole colour wheel) |
 |---|---|
 | string ↔ plain | 15.4 |
 | string ↔ number | 11.4 |
 | function ↔ plain | 17.4 |
 | function ↔ string | 15.9 |
 
-**명도비는 제약이 아니었다.** 처음에는 그것이 상한을 정할 것이라고 예상했고 틀렸다 — `t = 1.0`에서도 surface 대비 최악이 6.1인데, 이 팔레트가 이미 싣고 있는 `outline`이 4.23이다. M3의 `fromSeed`가 `primary`/`tertiary`를 고정 톤으로 매핑해 애초에 읽히게 만들기 때문이다.
+**Contrast ratio was not a constraint.** At first it was expected to set the upper limit, and that was wrong — even at `t = 1.0` the worst against the surface is 6.1, while `outline`, which this palette already carries, is 4.23. That is because M3's `fromSeed` maps `primary`/`tertiary` to fixed tones and makes them legible in the first place.
 
-그리고 **명도비로는 이 변경을 잴 수 없었다.** 명도비는 휘도만 본다 — 빨강과 초록이 같은 명도비를 가질 수 있다. 첫 스윕이 "구분 1.07"을 내놓아 안 보인다고 읽힐 뻔했는데, 그 자는 색상 차이를 재지 못하는 자였다. CIE Lab의 ΔE로 바꾸고 나서야 숫자가 눈과 맞았다.
+And **contrast ratio could not measure this change.** Contrast ratio looks only at luminance — red and green can have the same contrast ratio. The first sweep produced "separation 1.07" and nearly got read as invisible, but that ruler was one that cannot measure hue difference. Only after switching to CIE Lab ΔE did the numbers match the eye.
 
-## 왜 이 두 자리인가
+## Why these two places
 
-**`function`은 유일하게 비어 있던 슬롯이었다.** [ADR-0001](0001-token-kinds-are-lexical-only.md)이 인용한 조사에서 테마 **9/9**가 호출 이름을 다르게 칠하는데, 이 팔레트만 아무것도 주지 않았다. 이유가 *"남은 축이 없다"*였고 이 문서가 그 이유를 지운다.
+**`function` was the only empty slot.** In the survey [ADR-0001](0001-token-kinds-are-lexical-only.md) cites, **9/9** themes paint call names differently, and only this palette gave it nothing. The reason was *"there is no axis left"*, and this document removes that reason.
 
-**`string`은 히어로 이미지가 실패한 자리다.** 이 패키지의 존재 이유가 중첩 보간에서 `'✓'`가 문자열로 그려지는 것인데, 파생 기본값에서는 그 구분이 밝기 한 단계뿐이라 화면에서 안 보였다.
+**`string` is where the hero image failed.** This package's reason to exist is that `'✓'` in a nested interpolation is drawn as a string, and in the derived default that distinction was a single step of brightness, so it was invisible on screen.
 
-**`number`는 일부러 남긴다.** 리터럴 셋을 다 옮기면 서로에 대해서는 제자리다. `string`만 움직이면서 문자열과 숫자 사이에 없던 구분이 생긴다.
+**`number` is left on purpose.** If all three literals moved, they would stay in place relative to each other. Moving only `string` creates a distinction between strings and numbers that was not there.
 
-**`escape`는 따라간다.** 자기 리터럴의 일부이고, 프리셋 조사([#9](https://github.com/kihyun1998/flutter_syntax_highlight/issues/9))에서 열 중 넷이 escape를 number와 같은 색으로 칠했다 — 항상 구분하는 것이 보편적인 선택은 아니다.
+**`escape` follows.** It is part of its own literal, and in the preset survey ([#9](https://github.com/kihyun1998/flutter_syntax_highlight/issues/9)) four of the ten painted escape in the same colour as number — always distinguishing it is not the universal choice.
 
 ## Consequences
 
-**겉모습이 바뀌므로 `0.2.0`이다.** `flutter_example_template`이 `^0.1.0`을 걸고 있어 자동으로 따라오지 않는다 — 명시적으로 올려야 하고, 그래서 아무도 놀라지 않는다.
+**The look changes, so it is `0.2.0`.** `flutter_example_template` pins `^0.1.0` and so does not follow automatically — it has to be bumped explicitly, and so nobody is surprised.
 
-**파생은 프리셋과 다른 방식으로 검사해야 한다.** 프리셋은 값이 고정이라 열 개를 재면 끝이지만 소비자의 스킴은 무한하다. 자기 시드에서 눈으로 고른 계수는 그 시드에서만 맞으므로, 색상환 스윕이 테스트로 남는다.
+**The derived default has to be checked differently from the presets.** The presets have fixed values, so measuring the ten is the end of it, but consumers' schemes are infinite. A coefficient picked by eye on one's own seed is right only on that seed, so the colour-wheel sweep stays as a test.
 
-**계수를 값으로 못 박지 않는다.** 팔레트 테스트는 당긴 색이 **앵커와 목적지 사이**에 있는지를 본다. 계수는 다시 측정될 수 있고, 그때 이 성질은 그대로 남아야 한다. 임의의 색을 넣으면 계수와 무관하게 걸린다.
+**The coefficient is not nailed down as a value.** The palette test checks that a pulled colour lies **between the anchor and the destination**. The coefficient may be measured again, and this property must survive when it is. Putting in an arbitrary colour gets caught regardless of the coefficient.
 
-**[ADR-0002](0002-a-palette-carries-its-own-background.md)와 방향이 반대인 것처럼 보이지만 같은 규칙이다** — 색을 고른 쪽이 그 색이 놓일 자리도 정한다. 프리셋은 상류가 골랐으니 배경도 상류의 것을 들고 오고, 파생은 앱이 골랐으니 배경도 앱의 것을 쓰고 색상도 앱의 것을 빌린다.
+**It looks like the opposite direction from [ADR-0002](0002-a-palette-carries-its-own-background.md), but it is the same rule** — whoever picks a colour also decides where it sits. Upstream picked the presets, so they bring upstream's background too; the app picked the derived default's colours, so it uses the app's background and borrows the app's hues too.

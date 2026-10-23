@@ -22,7 +22,7 @@ The widget calls the scanner, but nothing in the scanner stops the widget from
 adding a gutter `WidgetSpan` (which writes `\u{FFFC}` into every copied line),
 and nothing in the span tree stops the scanner from normalising `\r\n`. A
 change to either alone breaks the package's central claim (GLOSSARY.md,
-*Partition*: "이 패키지의 핵심 주장이다").
+*Partition*: "It is this package's central claim").
 
 ## Territories it holds in
 
@@ -45,14 +45,14 @@ placeholder child in the span tree (`\u{FFFC}` per line).
 - Stated as the package's claim from the first scanner port (commit `0ad9765`,
   2026-09-06) and asserted over the fixture corpus, this package's own `lib/`,
   and both again as CRLF — `test/tokenizer/corpus_test.dart`, group
-  `partition — 붙여넣기 계약이 기대는 성질`.
+  `partition — the property the paste contract leans on`.
 - Broken once on valid Dart: a defensive end-offset clamp moved an end backwards
-  and `substring` threw (commit `c8be0a8`, 2026-09-06; ADR-0001 *이후 기록*).
+  and `substring` threw (commit `c8be0a8`, 2026-09-06; ADR-0001 *Later record*).
 - A partition check alone passes on a scanner that emits one `plain` token for
   everything — measured by doing it; `test/support/partition.dart` —
   `expectPartitions` adds the "more than one kind" side condition.
 - Widget side asserted by `test/widget/syntax_text_test.dart`, group
-  `하이라이터는 붙여넣을 것을 바꾸지 못한다`.
+  `the highlighter cannot change what gets pasted`.
 
 ## Where it will recur
 

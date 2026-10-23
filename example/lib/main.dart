@@ -3,15 +3,16 @@ import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 
 void main() => runApp(const ExampleApp());
 
-/// 보여줄 조각.
+/// The sample to show.
 ///
-/// **중첩 보간이 들어 있는 것이 요점이다.** `'${term.value ? '✓' : '✗'}'`에서
-/// 안쪽 `'✓'`가 **문자열로** 그려지는 것이 화면에 보인다 — 따옴표를 단순히
-/// 짝짓는 스캐너는 정확히 그 반대로 칠한다. 이 패키지가 존재하는 이유이고,
-/// 스크린샷이 가리켜야 하는 글자다.
+/// **The point is that it contains a nested interpolation.** In
+/// `'${term.value ? '✓' : '✗'}'` the inner `'✓'` is visibly drawn **as a
+/// string** — a scanner that simply pairs quotes paints exactly the opposite.
+/// It is the reason this package exists, and the glyph a screenshot should
+/// point at.
 ///
-/// 나머지는 여덟 kind가 전부 나오도록 골랐다: 주석, 키워드, 문자열, 숫자,
-/// 구두점, escape, 호출 이름, 그리고 평범한 식별자.
+/// The rest was chosen so that all eight kinds appear: comment, keyword,
+/// string, number, punctuation, escape, call name, and plain identifier.
 const sample = r'''
 // A ledger line, rendered by the package that draws this page.
 class Term {
@@ -32,15 +33,17 @@ class Term {
 }
 ''';
 
-/// 고를 수 있는 팔레트들.
+/// The palettes to choose from.
 ///
-/// **패키지는 이름 룩업을 두지 않는다** — 프리셋을 고르게 하려는 소비자가 자기
-/// 목록을 쓴다. 이것이 그 목록이고, 이 파일이 그 결정의 유일한 소비자다.
+/// **The package has no lookup by name** — a consumer who wants to offer a
+/// choice of presets writes their own list. This is that list, and this file
+/// is the only consumer of that decision.
 ///
-/// 첫 항목만 null이다: 팔레트를 넘기지 않으면 `SyntaxPalette.fromColorScheme`이
-/// 쓰이고, 그것만이 라이트와 다크 양쪽에서 설정 없이 맞는다.
+/// Only the first entry is null: passing no palette means
+/// `SyntaxPalette.fromColorScheme` is used, and only that one is right in both
+/// light and dark with nothing to configure.
 const palettes = <String, SyntaxPalette?>{
-  'ColorScheme에서 파생 (기본값)': null,
+  'Derived from ColorScheme (default)': null,
   'solarizedDark': SyntaxPalette.solarizedDark,
   'solarizedLight': SyntaxPalette.solarizedLight,
   'oneDark': SyntaxPalette.oneDark,
@@ -53,15 +56,16 @@ const palettes = <String, SyntaxPalette?>{
   'cobalt2': SyntaxPalette.cobalt2,
 };
 
-/// 고를 수 있는 시드.
+/// The seeds to choose from.
 ///
-/// **파생 기본값이 앱의 스킴에서 나온다는 주장을 실연하는 장치다.** 문장으로만
-/// 하던 주장을 시드를 바꿔 눈으로 보인다 — 문자열과 호출 이름의 색이 스킴을
-/// 따라 같이 움직인다.
+/// **A device that demonstrates the claim that the derived default comes from
+/// the app's scheme.** A claim made only in words is shown to the eye by
+/// changing the seed — the colours of strings and call names move along with
+/// the scheme.
 ///
-/// 마지막 항목이 요점이다: 무채색 스킴에서는 **팔레트도 무채색이 된다.** 이
-/// 패키지는 앱의 색상을 빌릴 뿐 자기 색상을 도입하지 않으므로, 빌릴 것이 없으면
-/// 아무 색도 나오지 않는다.
+/// The last entry is the point: with an achromatic scheme **the palette becomes
+/// achromatic too.** This package only borrows the app's hues and introduces no
+/// hue of its own, so with nothing to borrow, no colour comes out.
 class Seed {
   const Seed(
     this.label,
@@ -74,24 +78,26 @@ class Seed {
   final DynamicSchemeVariant variant;
 }
 
-/// 휠 데모에서 고를 수 있는 움직임.
+/// The motions to choose from in the wheel demo.
 ///
-/// 첫 항목이 `SyntaxText`의 기본값이고, 마지막 `null`이 애니메이션을 끈다. 바꿔도
-/// 스크롤 위치는 그대로라, 같은 자리에서 굴려 보며 비교할 수 있다.
+/// The first entry is `SyntaxText`'s default, and the last, `null`, turns the
+/// animation off. Switching keeps the scroll position, so you can roll the
+/// wheel at the same spot and compare.
 const motions = <String, WheelMotion?>{
-  'spring (기본값)': WheelMotion.spring(),
+  'spring (default)': WheelMotion.spring(),
   'spring 250ms, bounce 0.2': WheelMotion.spring(
     duration: Duration(milliseconds: 250),
     bounce: 0.2,
   ),
   'curve easeOut': WheelMotion.curve(curve: Curves.easeOut),
   'lerp': WheelMotion.lerp(),
-  '끔 (null)': null,
+  'off (null)': null,
 };
 
-/// 휠 데모의 조각. **창보다 길고 넓어야** 휠로 움직일 것이 있다 — [sample]은
-/// 800×600 창 안에 다 들어가서 어느 축으로도 스크롤되지 않는다. 가로는
-/// Shift+휠로 움직인다.
+/// The wheel demo's sample. **It has to be longer and wider than the window**
+/// for the wheel to have something to move — [sample] fits entirely in an
+/// 800×600 window and does not scroll on either axis. Horizontal movement is
+/// Shift+wheel.
 final wheelSample = [
   '// Long and wide on purpose: turn the wheel, then Shift+wheel.',
   'class Ledger {',
@@ -102,11 +108,15 @@ final wheelSample = [
 ].join('\n');
 
 const seeds = <Seed>[
-  Seed('보라', Color(0xFF6750A4)),
-  Seed('청록', Color(0xFF006B5F)),
-  Seed('주황', Color(0xFFB3541E)),
-  Seed('파랑', Color(0xFF0B57D0)),
-  Seed('무채색', Color(0xFF5A5A5A), variant: DynamicSchemeVariant.monochrome),
+  Seed('Purple', Color(0xFF6750A4)),
+  Seed('Teal', Color(0xFF006B5F)),
+  Seed('Orange', Color(0xFFB3541E)),
+  Seed('Blue', Color(0xFF0B57D0)),
+  Seed(
+    'Achromatic',
+    Color(0xFF5A5A5A),
+    variant: DynamicSchemeVariant.monochrome,
+  ),
 ];
 
 class ExampleApp extends StatefulWidget {
@@ -140,9 +150,10 @@ class _ExampleAppState extends State<ExampleApp> {
         appBar: AppBar(
           title: const Text('flutter_syntax_highlight'),
           actions: [
-            // 시드 스와치. 파생 기본값이 앱의 스킴에서 나온다는 것을 눈으로
-            // 보이는 장치이고, 마지막 칸(무채색)이 "자기 색상을 도입하지
-            // 않는다"를 보인다 — 빌릴 색이 없으면 아무 색도 안 나온다.
+            // Seed swatches. A device that shows to the eye that the derived
+            // default comes from the app's scheme, and the last swatch
+            // (achromatic) shows "introduces no hue of its own" — with no
+            // colour to borrow, no colour comes out.
             for (final seed in seeds)
               IconButton(
                 tooltip: seed.label,
@@ -154,11 +165,11 @@ class _ExampleAppState extends State<ExampleApp> {
                 ),
               ),
             const SizedBox(width: 8),
-            // 밝기 토글. 파생 기본값이 양쪽에서 맞다는 주장을 눈으로 보이는
-            // 장치이고, 실명 프리셋이 반대 밝기에서 보이지 않게 되는 것도 같이
-            // 보인다.
+            // Brightness toggle. A device that shows to the eye the claim that
+            // the derived default is right in both, and it also shows a named
+            // preset becoming invisible in the opposite brightness.
             IconButton(
-              tooltip: isLight ? '다크로' : '라이트로',
+              tooltip: isLight ? 'Switch to dark' : 'Switch to light',
               icon: Icon(
                 isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
               ),
@@ -167,10 +178,11 @@ class _ExampleAppState extends State<ExampleApp> {
                     _brightness = isLight ? Brightness.dark : Brightness.light,
               ),
             ),
-            // 휠 데모 토글. 첫 화면은 스크린샷이 가리키는 것이라 그대로 두고,
-            // 휠은 넘칠 만큼 긴 조각에서 보인다.
+            // Wheel demo toggle. The first screen is what the screenshot
+            // points at, so it is left as is, and the wheel is shown on a
+            // sample long enough to overflow.
             IconButton(
-              tooltip: _wheelDemo ? '처음 화면으로' : '휠 데모',
+              tooltip: _wheelDemo ? 'Back to the first screen' : 'Wheel demo',
               icon: Icon(_wheelDemo ? Icons.mouse : Icons.mouse_outlined),
               onPressed: () => setState(() => _wheelDemo = !_wheelDemo),
             ),
@@ -178,10 +190,11 @@ class _ExampleAppState extends State<ExampleApp> {
           ],
         ),
         body: Column(
-          // 기본값 `center`는 `Expanded`가 늘리는 세로만 두고 가로로는 코드
-          // 블록을 자기 텍스트 폭으로 쪼그라뜨려 가운데 세운다. 코드 뷰어는
-          // pane을 채워야 하고, 채우지 않으면 가로 스크롤이 화면에 나타나지도
-          // 않는다 — 스크린샷을 찍다가 잡았다.
+          // The default, `center`, leaves only the vertical that `Expanded`
+          // stretches, and horizontally shrinks the code block to its own text
+          // width and centres it. A code viewer has to fill the pane, and if it
+          // does not, horizontal scrolling never even shows up on screen —
+          // caught while taking screenshots.
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
@@ -190,7 +203,7 @@ class _ExampleAppState extends State<ExampleApp> {
                   ? _motionPicker()
                   : Row(
                       children: [
-                        const Text('팔레트'),
+                        const Text('Palette'),
                         const SizedBox(width: 12),
                         Expanded(
                           child: DropdownButton<String>(
@@ -215,8 +228,8 @@ class _ExampleAppState extends State<ExampleApp> {
                 _wheelDemo ? wheelSample : sample,
                 palette: palettes[_palette],
                 wheelMotion: motions[_motion],
-                copyTooltip: '복사',
-                copiedTooltip: '복사됨',
+                copyTooltip: 'Copy',
+                copiedTooltip: 'Copied',
               ),
             ),
           ],
@@ -227,7 +240,7 @@ class _ExampleAppState extends State<ExampleApp> {
 
   Widget _motionPicker() => Row(
     children: [
-      const Text('휠'),
+      const Text('Wheel'),
       const SizedBox(width: 12),
       Expanded(
         child: DropdownButton<String>(

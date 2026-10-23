@@ -1,54 +1,57 @@
-# Token kind는 어휘로 확정되는 구분만 담는다
+# A token kind holds only lexically decidable distinctions
 
-`DartTokenKind`는 8개다: `plain` `comment` `keyword` `string` `number` `punctuation` `escape` `function`. 어떤 구분을 kind로 승격할지는 **스캐너가 문자만 보고 확실하게 정할 수 있는가**로 갈랐다 — 유명 테마 9종이 실제로 그것을 다르게 칠하는지도 함께 봤지만, 그건 필요조건이지 충분조건이 아니다. 어휘로 정해지지 않는 구분은 아무리 널리 칠해져도 넣지 않는다. 반쯤 맞는 답은 읽는 사람이 믿어 버리기 때문에, 답이 없는 것보다 나쁘다.
+`DartTokenKind` has 8 values: `plain` `comment` `keyword` `string` `number` `punctuation` `escape` `function`. Whether a distinction is promoted to a kind was decided by **whether a scanner can decide it for certain from the characters alone** — whether 9 well-known themes actually paint it differently was looked at too, but that is a necessary condition, not a sufficient one. A distinction the lexicon does not decide is not added, however widely it is painted. A half-right answer is worse than no answer, because the reader believes it.
 
 ## Considered Options
 
-**`type` vs `variable`을 넣는다** — 조사한 테마 **9/9 전부**가 이 둘을 다른 색으로 칠한다. 가장 눈에 띄는 구분이고, 넣지 않으면 "다른 하이라이터보다 밋밋하다"는 인상을 준다. 그런데 공식 Dart TextMate 문법(`dart-lang/dart-syntax-highlight`)이 그것을 정하는 규칙은 `[_$]*[A-Z][a-zA-Z0-9_$]*` — **대문자로 시작하면 타입**이라는 관습 기반 추측이다. `const PI`, enum 값, 제네릭 파라미터에서 틀린다. 어휘로 확실한 것은 `int double bool num dynamic void` 고정 목록뿐인데, 9개 테마 모두 그것들을 사용자 정의 타입과 같은 색으로 칠하므로 그 조각만으로는 아무 시각적 이득이 없다. **거부.**
+**Add `type` vs `variable`** — **all 9/9** of the surveyed themes paint these two in different colours. It is the most visible distinction, and leaving it out gives the impression of being "flatter than other highlighters". But the rule the official Dart TextMate grammar (`dart-lang/dart-syntax-highlight`) decides it with is `[_$]*[A-Z][a-zA-Z0-9_$]*` — a convention-based guess that **if it starts with a capital, it is a type**. It is wrong on `const PI`, enum values and generic parameters. The only lexically certain part is the fixed list `int double bool num dynamic void`, and all 9 themes paint those in the same colour as user-defined types, so that fragment alone gives no visual gain. **Rejected.**
 
-**`annotation`(`@override`)을 넣는다** — `@` 다음 식별자라 어휘적으로 완벽하다. 그런데 조사해 보니 Dart에서 이것을 다르게 칠하는 테마가 **0/9**다. 테마들의 decorator 규칙은 Java/Python 전용이라 Dart의 `storage.type.annotation.dart`에 닿지 않는다. 어휘 조건은 통과하지만 아무도 쓰지 않는다. **거부.**
+**Add `annotation` (`@override`)** — an identifier after `@`, so lexically perfect. But the survey found **0/9** themes that paint it differently in Dart. The themes' decorator rules are Java/Python only and do not reach Dart's `storage.type.annotation.dart`. It passes the lexical condition but nobody uses it. **Rejected.**
 
-**`operator`를 `punctuation`에서 분리한다** — 어휘적으로 자명하다. 그러나 합의가 없다: 1/9만 고유색, 6/9는 keyword와 같은 색, 2/9는 명시적으로 plain으로 되돌린다. 나눠도 팔레트가 뭘 해야 할지 정해지지 않는다. **거부.**
+**Split `operator` out of `punctuation`** — lexically obvious. But there is no consensus: only 1/9 gives it its own colour, 6/9 the same colour as keyword, and 2/9 explicitly set it back to plain. Splitting it would not settle what a palette should do. **Rejected.**
 
-**`interpolation`을 kind로 넣는다** — 처음에는 가장 유력한 후보였다. 8/9 테마가 보간 구간을 문자열과 다르게 칠하고, 스캐너의 `_stringEnd`와 `_interpolationEnd`가 이미 그 경계를 계산해 놓고 버리고 있었다. **그런데 보간 안을 재귀적으로 토큰화하기로 하자 필요가 사라졌다** — 아래 참조.
+**Add `interpolation` as a kind** — at first the strongest candidate. 8/9 themes paint the interpolation span differently from the string, and the scanner's `_stringEnd` and `_interpolationEnd` were already computing that boundary and throwing it away. **But once the inside of an interpolation was to be tokenized recursively, the need went away** — see below.
 
 ## Consequences
 
-**보간 안은 재귀적으로 토큰화된다.** `'${term.value ? '✓' : '✗'}'`는 토큰 하나가 아니라 `string` / `punctuation` / `plain` / `string` / … 의 열이 된다. 테마들이 하는 일이 *"보간 안에서 문자열 색을 끄고 기본 전경색으로 되돌리기"*인데, 내용물이 그냥 보통 토큰이 되면서 그게 저절로 달성된다. 그래서 `interpolation` kind는 존재하지 않는다 — **없어서 못 하는 게 아니라, 할 일이 없어서 없다.** 이 파일이 없으면 다음 사람이 반드시 "왜 보간 kind가 없지"라고 물을 지점이다.
+**The inside of an interpolation is tokenized recursively.** `'${term.value ? '✓' : '✗'}'` becomes not one token but a sequence of `string` / `punctuation` / `plain` / `string` / …. What the themes do is *"turn the string colour off inside an interpolation and fall back to the default foreground"*, and once the contents simply become ordinary tokens, that is achieved by itself. So there is no `interpolation` kind — **it is absent not because it cannot be done, but because there is nothing for it to do.** Without this file, it is the exact point where the next person will ask "why is there no interpolation kind".
 
-**대신 그 열이 이 패키지의 주장을 화면에서 증명한다.** 중첩된 `'✓'`가 문자열로 그려진다. quote-pair 정규식 스캐너는 정확히 그 반대로 칠한다 — 보간 안의 코드를 문자열로, 문자열을 코드로.
+**Instead, that sequence proves this package's claim on screen.** The nested `'✓'` is drawn as a string. A quote-pair regex scanner paints exactly the opposite — the code inside the interpolation as string, and the string as code.
 
-**doc comment의 한 문장이 거짓이 되었다.** 참조 구현은 *"A whole literal is one token, interpolations included"*라고 적어 두었다. 이제 아니다. 그 문장이 떠받치던 논증(`_stringEnd`와 `_interpolationEnd`의 상호 재귀가 경계를 맞게 찾는다)은 변하지 않았고, 오히려 토큰으로 눈에 보이게 되었다. 문장만 다시 쓴다.
+**One sentence of the doc comment became false.** The reference wrote *"A whole literal is one token, interpolations included"*. It no longer is. The argument that sentence held up (the mutual recursion of `_stringEnd` and `_interpolationEnd` finds the boundary correctly) has not changed, and has if anything become visible as tokens. Only the sentence is rewritten.
 
-**partition 성질은 그대로다.** 토큰을 더 잘게 쪼개도 전부 기록된 오프셋에서 잘라 내므로, 이어 붙이면 여전히 입력과 바이트 단위로 같다.
+**The partition property stands.** Cutting tokens finer still cuts them all at recorded offsets, so concatenating them still equals the input byte for byte.
 
-**이 목록은 사실상 영구적이다.** Dart enum에 값을 추가하는 것은 소비자의 전수 `switch`를 깨뜨리므로, pub 공개 후에는 breaking change다. "나중에 필요하면 넣는다"가 성립하지 않아서, 조사가 근거를 준 시점에 못 박았다. 참고로 무리한 확장은 아니다 — 조사한 테마들은 전경색을 11~18개 갖지만 **Dart 파일 안에 실제로 나타나는 것은 7~10개**이고, 8은 그 한가운데다.
+**This list is effectively permanent.** Adding a value to a Dart enum breaks a consumer's exhaustive `switch`, so after publishing to pub it is a breaking change. "Add it later if needed" does not hold, so it was nailed down at the point the survey gave grounds for it. For the record, it is not an overreach — the surveyed themes have 11–18 foreground colours, but **7–10 actually appear inside a Dart file**, and 8 sits in the middle of that.
 
-**`function`만 스캐너의 동작을 늘린다.** 나머지 일곱은 스캐너가 이미 아는 것을 내보내기만 하면 되지만, `function`은 `(` 앞을 보는 lookahead 분기를 새로 넣는다. 이 결정에서 유일하게 회귀 위험이 있는 자리이므로, mutation testing이 가장 필요한 곳이다.
-
----
-
-*근거가 된 측정: [유명 syntax 테마는 실제로 무엇을 구분해 칠하는가](https://github.com/kihyun1998/flutter_syntax_highlight/issues/3) (2026-09-05). 결정: [DartTokenKind의 최종 목록](https://github.com/kihyun1998/flutter_syntax_highlight/issues/5).*
+**Only `function` extends what the scanner does.** The other seven only need the scanner to emit what it already knows, but `function` adds a new lookahead branch that looks ahead for `(`. It is the one place in this decision with regression risk, so it is where mutation testing is most needed.
 
 ---
 
-## 이후 기록
+*The measurement it rests on: [What do well-known syntax themes actually paint differently](https://github.com/kihyun1998/flutter_syntax_highlight/issues/3) (2026-09-05). Decision: [The final list of DartTokenKind](https://github.com/kihyun1998/flutter_syntax_highlight/issues/5).*
 
-**함수 이름이 바뀌었다.** 위에서 `_stringEnd`로 부른 것은 이제
-`_scanStringLiteral`이다. 보간 안을 재귀적으로 토큰화하면서 경계를 계산하는 일과
-토큰을 내보내는 일을 한 함수가 맡게 되었고, 이름이 그것을 따라갔다. 결정 자체는
-바뀌지 않았다.
+---
 
-**"partition 성질은 그대로다"가 한 번 거짓이었다.** 재귀 토큰화를 넣으면서 경계를
-정하는 스캐너와 안을 다시 훑는 스캐너가 어긋날 수 있다고 보고, 끝 오프셋을 잘라내는
-방어를 넣었다. 그 방어가 잘린 끝을 앞선 끝보다 뒤로 보내면서 `substring`이 던졌고 —
-**유효한 Dart에서** — 잘못된 색보다 나쁜 실패가 되었다.
+## Later record
 
-두 가지가 그 자리에서 드러났다. 첫째, 어긋남의 원인은 보간 스캐너가 주석을 모른다는
-것이었고, 그것은 방어할 문제가 아니라 고칠 버그였다(`'${a /* } */ + 1}'`는 유효하고
-실행된다). 둘째, "이 입력은 유효한 Dart가 아니다"라고 적은 주석이 사실이 아니었다 —
-그 한 문장이 방어를 정당화하고 있었다.
+**The function was renamed.** What is called `_stringEnd` above is now
+`_scanStringLiteral`. Once the inside of an interpolation was tokenized
+recursively, one function took on both computing the boundary and emitting the
+tokens, and the name followed. The decision itself did not change.
 
-지금은 어긋남 자체가 없고, 마지막 방벽은 `tokenizeDart`의 `emit`에서 끝이 단조
-증가하는 것을 보장하는 한 줄뿐이다. 2026-09-06 기준 주석 원자를 넣은 알파벳으로
-30만 입력을 퍼징해 partition 위반 0, 예외 0, 그 가드 도달 0회다.
+**"The partition property stands" was false once.** When recursive tokenizing
+went in, the scanner that decides the boundary and the scanner that re-sweeps the
+inside were judged able to disagree, and a defence that clamped the end offset
+was added. That defence pushed a clamped end behind an earlier end, `substring`
+threw — **on valid Dart** — and it became a failure worse than a wrong colour.
+
+Two things came out on the spot. First, the cause of the disagreement was that
+the interpolation scanner did not know about comments, and that was not a
+problem to defend against but a bug to fix (`'${a /* } */ + 1}'` is valid and
+runs). Second, a comment that said "this input is not valid Dart" was not true —
+that one sentence was justifying the defence.
+
+Now there is no disagreement at all, and the last barrier is a single line in
+`tokenizeDart`'s `emit` that guarantees the end increases monotonically. As of
+2026-09-06, fuzzing 300,000 inputs with an alphabet that includes comment atoms
+gives 0 partition violations, 0 exceptions, and 0 hits on that guard.

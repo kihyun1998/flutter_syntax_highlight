@@ -1,30 +1,33 @@
-# `.pubignore`는 `.gitignore`를 보완하지 않고 **대체한다.** 여기 적히지 않은 것은
-# git이 무시하든 말든 배포 아카이브에 들어간다 — 이 파일을 처음 만들었을 때
-# 실제로 `build/` 아래 45MB짜리 캐시가 아카이브에 실렸다.
+# `.pubignore` **replaces** `.gitignore` rather than adding to it. Anything not
+# listed here goes into the published archive whether git ignores it or not —
+# when this file was first created, a 45MB cache under `build/` really did end
+# up in the archive.
 #
-# 그래서 `.gitignore`가 막던 것 중 **실제로 생길 수 있는 것**을 전부 옮겨 온다.
-# `pubspec.lock`과 `.DS_Store`는 pub이 자체적으로 배제하므로 뺐다.
+# So everything `.gitignore` blocked that **can actually appear** is carried
+# over. `pubspec.lock` and `.DS_Store` are left out because pub excludes them
+# itself.
 
-# 빌드 산출물과 도구 캐시
+# Build output and tool caches
 build/
 .dart_tool/
 .flutter-plugins-dependencies
 
-# 예제의 플랫폼 스캐폴딩. pub.dev의 example 탭은 `example/lib/main.dart`와
-# `example/README.md`를 읽는다 — macOS와 web 폴더는 아카이브를 20배로 불릴 뿐
-# 소비자가 읽을 것이 없다. 저장소에는 남는다(예제를 실행할 수 있어야 한다).
+# The example's platform scaffolding. pub.dev's example tab reads
+# `example/lib/main.dart` and `example/README.md` — the macOS and web folders
+# only grow the archive twentyfold and hold nothing for consumers to read. They
+# stay in the repository (the example must be runnable).
 example/macos/
 example/web/
 example/build/
 example/.dart_tool/
 
-# 게이트와 문서 생성이 만드는 것. `flutter test --coverage`나 `dart doc`
-# 한 번이면 생기고, 그러면 배포물에 실린다.
+# What the gates and doc generation produce. One `flutter test --coverage` or
+# `dart doc` creates them, and then they ship in the package.
 coverage/
 **/doc/api/
 *.log
 
-# IDE·에디터 파일
+# IDE and editor files
 .idea/
 .atom/
 .history
@@ -34,14 +37,14 @@ coverage/
 *.swp
 .metadata
 
-# 참조 구현 스냅샷. 패키지의 일부가 아니라, 구현이 자기 결과물을 대조하기 위한
-# 원본이다 — reference/README.md 참조.
+# The reference snapshot. It is not part of the package but the original the
+# implementation checked its own output against — see reference/README.md.
 reference/
 
-# 저장소 운영 문서. 소비자가 받을 이유가 없다. `docs/`를 빼는 데에는 이유가
-# 하나 더 있다 — pub은 top-level `docs`를 `doc`으로 바꾸라고 경고하는데,
-# `docs/adr` 경로는 CLAUDE.md의 규약이 가리키는 자리라 이름을 바꿀 수 없다.
-# 배포에서 빼면 규약을 지키면서 경고도 사라진다.
+# Repository housekeeping docs. Consumers have no reason to receive them.
+# Excluding `docs/` has one more reason — pub warns to rename a top-level `docs`
+# to `doc`, but `docs/adr` is the path CLAUDE.md's convention points to, so it
+# cannot be renamed. Excluding it keeps the convention and silences the warning.
 docs/
 CLAUDE.md
 GLOSSARY.md

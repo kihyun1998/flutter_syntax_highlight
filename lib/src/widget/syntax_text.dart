@@ -9,109 +9,125 @@ import 'package:flutter_smooth_wheel_scroll/flutter_smooth_wheel_scroll.dart'
 import '../tokenizer/dart_tokenizer.dart';
 import 'syntax_palette.dart';
 
-/// Dart 소스를 구문 강조해 그린다. 선택할 수 있고, 복사할 수 있다.
+/// Draws Dart source with syntax highlighting. Selectable and copyable.
 ///
-/// **소스 문자열을 받는다. asset 키가 아니다.** 어디서 읽어 오는지는 앱의 관심사고
-/// 이 위젯은 이미 손에 든 바이트를 그린다. 그래서 로딩 상태가 없고, 그에 딸린
-/// 실패 화면도 없다.
+/// **It takes a source string, not an asset key.** Where the source is read
+/// from is the app's concern; this widget draws the bytes already in hand. So
+/// there is no loading state, and no failure screen to go with one.
 ///
-/// ## 가로 스크롤은 파라미터가 아니다
+/// ## Horizontal scrolling is not a parameter
 ///
-/// 코드는 줄바꿈하지 않는다 — **줄바꿈된 줄은 다른 줄이다.** 그래서 가로 스크롤은
-/// 협상 대상이 아니고 언제나 이 위젯이 소유한다. [scrollable]은 **세로만**
-/// 지배한다: 끄면 세로로 shrink-wrap해 글 안의 코드 블록처럼 쓸 수 있고, 켜면
-/// 자기 영역 안에서 스크롤한다.
+/// Code does not wrap: **a wrapped line is a different line.** So horizontal
+/// scrolling is not negotiable, and this widget always owns it. [scrollable]
+/// governs **vertical only**: turn it off and the widget shrink-wraps
+/// vertically, so it can be used like a code block inside prose; turn it on
+/// and it scrolls within its own area.
 ///
-/// [ScrollController]도 어느 쪽이든 이 위젯이 이름 붙여 소유한다. **이유는
-/// [Scrollbar]가 추적할 대상을 분명히 갖게 하기 위해서다** — 이름 없는 컨트롤러로는
-/// 어느 [Scrollable]을 그리는지가 모호해진다.
+/// Either way, this widget also owns the [ScrollController]s, by name. **The
+/// reason is to give [Scrollbar] a definite thing to track**: with an unnamed
+/// controller, which [Scrollable] it draws for becomes ambiguous.
 ///
-/// 참조 구현은 여기에 다른 이유도 적어 두었다: `primary`가 켜지면 두 스크롤 뷰가
-/// 같은 [PrimaryScrollController]를 주장해 framework가 assert한다는 것. **재보니
-/// 그렇지 않다.** [PrimaryScrollController] 아래에서 `primary: true`로 감싸도
-/// 예외가 나지 않고 `positions.length`는 1이다 — [SelectableText]는 자기
-/// [EditableText]에 컨트롤러를 넘기지 않고, 그 [Scrollable]은 primary를 애초에
-/// 주장하지 않는다. 2026-09-06 측정.
+/// The reference also recorded another reason here: that with `primary` on,
+/// two scroll views claim the same [PrimaryScrollController] and the framework
+/// asserts. **Measured, that is not so.** Wrapping it with `primary: true`
+/// under a [PrimaryScrollController] throws no exception, and
+/// `positions.length` is 1: [SelectableText] does not pass its controller to
+/// its [EditableText], and that [Scrollable] never claims primary in the first
+/// place. Measured 2026-09-06.
 ///
-/// ## 가로는 끌어서 넘길 수 없다. 선택 가능한 것의 대가다
+/// ## Horizontal cannot be dragged. That is the price of being selectable
 ///
-/// 텍스트 위에서 가로로 드래그하면 스크롤되지 않는다. 세로는 된다. 측정
-/// (2026-09-06, 300×300 뷰포트, 뷰포트 중심에서 120px 드래그):
+/// Dragging horizontally over the text does not scroll. Vertically it does.
+/// Measured (2026-09-06, 300×300 viewport, 120px drag from the viewport
+/// centre):
 ///
 /// ```
-/// SelectableText        세로 100.0   가로 0.0
-/// SelectionArea + Text  세로 100.0   가로 0.0
-/// Text (선택 불가)       세로 100.0   가로 100.0
+/// SelectableText         vertical 100.0   horizontal 0.0
+/// SelectionArea + Text   vertical 100.0   horizontal 0.0
+/// Text (not selectable)  vertical 100.0   horizontal 100.0
 /// ```
 ///
-/// **선택 제스처가 가로 드래그를 가져간다.** [SelectionArea]로 바꿔도 같으므로
-/// [SelectableText]의 문제가 아니라 선택 그 자체의 대가다. 선택을 포기하지 않는 한
-/// 고칠 수 없다.
+/// **The selection gesture takes the horizontal drag.** Switching to
+/// [SelectionArea] gives the same result, so it is not a problem with
+/// [SelectableText] but the price of selection itself. It cannot be fixed
+/// without giving up selection.
 ///
-/// 그래서 가로 [Scrollbar]는 장식이 아니라 **터치에서 유일한 가로 어포던스**다.
-/// 데스크톱에서는 트랙패드와 휠도 쓸 수 있다. 이 위젯에서 스크롤바를 걷어내려는
-/// 사람은 이 문단을 먼저 읽어야 한다.
+/// So the horizontal [Scrollbar] is not decoration but **the only horizontal
+/// affordance on touch**. On desktop, the trackpad and wheel also work. Anyone
+/// who wants to strip the scrollbars from this widget must read this paragraph
+/// first.
 ///
-/// **Android에서는 그 바를 위젯이 켠다.** Material [Scrollbar]는 Android에서만
-/// `interactive`의 기본값이 false이고, thumb은 스크롤할 때만 나타나며 투명하면
-/// 히트를 받지 않는다 — 가로를 스크롤할 길이 그 thumb뿐이라, 기본값 그대로는
-/// 처음 보이게 할 방법이 없었다(#29). 그래서 Android에서 앱의
-/// [ScrollbarThemeData]가 `thumbVisibility`나 `interactive`를 정하지 않았으면 가로
-/// 바에 한해 `true`로 채운다. 세로 바는 끌어서 넘어가므로 건드리지 않는다.
-/// `interactive`를 켜면 바 자리를 **탭해도** 한 페이지 넘어간다 — Material
-/// [Scrollbar]는 드래그와 track 탭을 따로 끌 수 없어서, 그 대가로 받아들였다.
+/// **On Android, the widget turns that bar on.** Material [Scrollbar] defaults
+/// `interactive` to false on Android only, and the thumb appears only while
+/// scrolling and takes no hits while transparent. Since that thumb is the only
+/// way to scroll horizontally, with the defaults there was no way to make it
+/// appear in the first place (#29). So on Android, if the app's
+/// [ScrollbarThemeData] does not set `thumbVisibility` or `interactive`, they
+/// are filled with `true` for the horizontal bar only. The vertical bar is left
+/// alone, because dragging scrolls it. With `interactive` on, **tapping** where
+/// the bar sits also moves one page: Material [Scrollbar] cannot turn off drag
+/// and track tap separately, so that was accepted as the price.
 ///
-/// **앱이 정한 값이 이긴다.** 앱 테마에서 `thumbVisibility: false`나
-/// `interactive: false`를 주면 위젯은 그것을 바꾸지 않고, 그러면 Android 터치
-/// 사용자는 가로로 넘길 방법이 없다. 배경을 주는 팔레트도 thumb **색**만 덮고
-/// 앱의 나머지 스크롤바 테마는 그대로 둔다(ADR-0004).
+/// **The app's values win.** If the app theme gives `thumbVisibility: false`
+/// or `interactive: false`, the widget does not change them, and then Android
+/// touch users have no way to scroll horizontally. A palette that gives a
+/// background also overrides only the thumb **colour** and leaves the rest of
+/// the app's scrollbar theme alone (ADR-0004).
 ///
-/// 가로 바는 세로 스크롤 뷰보다 바깥에 있어 `scrollable`과 상관없이 위젯 영역의
-/// 바닥에 그려진다. 두 바 모두 화면 inset(`MediaQuery`의 padding)을 따르지 않고
-/// 위젯 영역의 끝에 붙는다(#31). 위젯이 화면 맨 아래에 놓여 그 바닥이 시스템
-/// 제스처 영역에 걸리는 것은 이 위젯이 알 수 없으므로, 피하는 것은 앱의
-/// 몫이다([SafeArea] 등).
+/// The horizontal bar sits outside the vertical scroll view, so it is drawn at
+/// the bottom of the widget area regardless of `scrollable`. Both bars ignore
+/// the screen inset (`MediaQuery`'s padding) and sit at the edge of the widget
+/// area (#31). This widget cannot know that it sits at the very bottom of the
+/// screen with its bottom edge in the system gesture area, so avoiding that is
+/// the app's job ([SafeArea] and the like).
 ///
-/// 데스크톱에서 Material이 세로 스크롤 뷰에 자동으로 붙이는 바는 세로 뷰에서 끈다.
-/// 위의 세로 바와 같은 것을 한 번 더 그리기 때문이다(#32). 앱의 나머지
-/// [ScrollBehavior]는 그대로 걸린다.
+/// On desktop, the bar Material attaches automatically to a vertical scroll
+/// view is turned off for the vertical view, because it draws the same thing
+/// as the vertical bar above a second time (#32). The rest of the app's
+/// [ScrollBehavior] still applies.
 ///
-/// ## 마우스 휠은 미끄러진다
+/// ## The mouse wheel glides
 ///
-/// 두 컨트롤러는 `flutter_smooth_wheel_scroll`의 `SmoothScrollController`다. 휠
-/// 한 notch는 순간이동하지 않고 [wheelMotion]으로 목표까지 가며, 코드의 시작과
-/// 끝을 넘지 않는다. 가로는 Shift+휠로 같은 방식으로 움직인다. 스크롤바가 뷰와 같은
-/// 컨트롤러를 쓰므로 스크롤바 위에서 굴린 휠도 같다.
+/// Both controllers are `flutter_smooth_wheel_scroll`'s
+/// `SmoothScrollController`. A wheel notch does not teleport: it travels to
+/// its target with [wheelMotion], and does not go past the start or end of the
+/// code. Horizontal moves the same way with Shift+wheel. Because the
+/// scrollbars use the same controllers as their views, the wheel rolled over a
+/// scrollbar behaves the same.
 ///
-/// 드래그, 스크롤바 드래그, 키보드, 트랙패드는 [ScrollController]일 때와 같다.
-/// notch 하나가 얼마나 가는지는 이 위젯이 아니라 앱이 정한다 — 앱 전체에 걸리는
-/// `SmoothWheelBinding`의 몫이다.
+/// Drag, scrollbar drag, keyboard and trackpad behave as with a
+/// [ScrollController]. How far one notch goes is decided by the app, not this
+/// widget: it is the job of `SmoothWheelBinding`, which applies app-wide.
 ///
-/// ## 글꼴은 `TextStyle` 하나가 아니라 숫자 몇 개로 받는다
+/// ## The font is taken as a few numbers, not one `TextStyle`
 ///
-/// [TextStyle]을 통째로 받으면 `inherit: true` 함정을 소비자에게 그대로 건넨다 —
-/// 앰비언트 [DefaultTextStyle]이 머지되어, family를 지목하지 않고 fallback만
-/// 나열한 스타일은 **앱의 비례 글꼴로 그려진다.** 필요한 값만 이름 붙여 받으면
-/// 그 총구가 소비자를 향하지 않는다.
+/// Taking a whole [TextStyle] hands the `inherit: true` trap straight to the
+/// consumer: the ambient [DefaultTextStyle] is merged in, and a style that
+/// lists only fallbacks without naming a family **is drawn in the app's
+/// proportional font.** Taking only the values needed, by name, keeps that gun
+/// from pointing at the consumer.
 ///
-/// [fontFamily]가 null이어도 **반드시 non-null family가 지목된다.** null을
-/// "설정하지 않음"으로 해석하면 위의 상속이 되돌아온다.
+/// Even when [fontFamily] is null, **a non-null family is always named.**
+/// Reading null as "not set" would bring back the inheritance above.
 ///
-/// 루트 스타일의 색은 `ColorScheme.onSurface`다. 팔레트가 [DartTokenKind.plain]에
-/// 스타일을 주지 않으면 평범한 코드는 그 색으로 그려진다 — 파생 기본값이 실제로
-/// 그렇고, 색이 있는 팔레트를 넘기면서 `plain`을 비워 두면 앱 테마의 색이 남는다.
+/// The root style's colour is `ColorScheme.onSurface`. If the palette gives no
+/// style for [DartTokenKind.plain], plain code is drawn in that colour: the
+/// derived default actually does this, and passing a coloured palette while
+/// leaving `plain` empty leaves the app theme's colour.
 ///
-/// **[SyntaxPalette.background]를 주는 팔레트는 `plain`도 같이 줘야 한다.** 그때
-/// 남는 앱 테마의 색은 앱의 surface에 대고 고른 것이고, 이제 뒤에 있는 것은 그
-/// surface가 아니다. 실린 프리셋 열 개는 전부 둘 다 준다.
+/// **A palette that gives [SyntaxPalette.background] must give `plain` too.**
+/// The app theme's colour left over in that case was chosen against the app's
+/// surface, and what is behind it now is not that surface. All ten shipped
+/// presets give both.
 ///
-/// ## 줄 번호는 없다
+/// ## There are no line numbers
 ///
-/// 이 위젯은 붙여넣을 수 있는 조각을 보이는 것이지 소스 뷰어가 아니다. 그리고 그
-/// 기능의 자연스러운 구현이 곧 망가진 구현이다 — 인라인 gutter를 placeholder
-/// 스팬으로 만들면 [SelectableText]가 `includePlaceholders`를 기본값으로 두므로
-/// **복사되는 모든 줄에 `\u{FFFC}`가 들어간다.** 자식이 [TextSpan]이어야 한다는
-/// 것은 문서에만 적혀 있고 assert되지 않는다. 그 가드가 테스트에 있다.
+/// This widget shows a snippet to paste, not a source viewer. And the natural
+/// implementation of that feature is a broken one: build an inline gutter from
+/// placeholder spans and, because [SelectableText] leaves
+/// `includePlaceholders` at its default, **every copied line gets a
+/// `\u{FFFC}`.** That the children must be [TextSpan]s is only written in the
+/// docs, not asserted. The guard for it is in the tests.
 class SyntaxText extends StatefulWidget {
   const SyntaxText(
     this.source, {
@@ -129,67 +145,71 @@ class SyntaxText extends StatefulWidget {
     this.wheelMotion = const WheelMotion.spring(),
   });
 
-  /// 그릴 Dart 소스.
+  /// The Dart source to draw.
   final String source;
 
-  /// null이면 `SyntaxPalette.fromColorScheme(Theme.of(context).colorScheme)`.
+  /// If null, `SyntaxPalette.fromColorScheme(Theme.of(context).colorScheme)`.
   final SyntaxPalette? palette;
 
-  /// 코드 영역 우상단의 복사 오버레이.
+  /// The copy overlay at the top right of the code area.
   ///
-  /// **이 버튼의 정당화 두 개가 참조 구현에서 이미 철회됐다.** "발견 가능성"과
-  /// "터치 플랫폼 보완"이었는데, 같은 측정이 둘 다 틀렸음을 보였다 —
-  /// `AdaptiveTextSelectionToolbar`가 Android에서 이미 복사를 제공한다. 되돌아오지
-  /// 않게 여기 적어 둔다.
+  /// **Two justifications for this button were already withdrawn in the
+  /// reference.** They were "discoverability" and "making up for touch
+  /// platforms", and the same measurement showed both to be wrong:
+  /// `AdaptiveTextSelectionToolbar` already offers copy on Android. Written
+  /// down here so they do not come back.
   ///
-  /// 그럼에도 남긴 이유는 편의다. 검증 장치가 아니다 — 붙여넣기 보장을 지키는 것은
-  /// 렌더된 트리가 원본 바이트로 평탄화되는지를 보는 검사이지 클립보드가 아니다.
+  /// It stays anyway, for convenience. It is not a verification device: what
+  /// keeps the paste guarantee is the check that the rendered tree flattens to
+  /// the original bytes, not the clipboard.
   final bool copyable;
 
-  /// 복사 버튼의 툴팁. 기본값이 영문이므로 앱의 언어에 맞춰 넘긴다.
+  /// The copy button's tooltip. The default is English, so pass one in the
+  /// app's language.
   final String copyTooltip;
 
-  /// 복사 직후의 툴팁.
+  /// The tooltip right after copying.
   final String copiedTooltip;
 
-  /// **세로 스크롤만** 지배한다. 가로는 언제나 이 위젯이 소유한다.
+  /// Governs **vertical scrolling only**. This widget always owns horizontal.
   final bool scrollable;
 
-  /// null이면 실행 플랫폼의 고정폭 글꼴을 지목한다.
+  /// If null, names the running platform's monospace font.
   final String? fontFamily;
 
-  /// null이면 [monoCandidates]에서 선택된 family를 뺀 것.
+  /// If null, [monoCandidates] minus the selected family.
   final List<String>? fontFamilyFallback;
 
   final double fontSize;
   final double height;
   final EdgeInsetsGeometry padding;
 
-  /// 마우스 휠에 코드가 움직이는 방식. 세로와 가로 둘 다에 걸린다.
+  /// How the code moves under the mouse wheel. Applies to both vertical and
+  /// horizontal.
   ///
-  /// 기본값은 `WheelMotion.spring()`이다: notch가 가리키는 곳까지 애니메이션하고,
-  /// 움직이는 동안 들어온 notch는 그 목표에 더해진다. `null`이면 notch마다 즉시
-  /// 간다.
+  /// The default is `WheelMotion.spring()`: it animates to where the notch
+  /// points, and notches that arrive while it moves add to that target. With
+  /// `null`, each notch goes immediately.
   ///
   /// ```dart
   /// wheelMotion: const WheelMotion.spring(
   ///   duration: Duration(milliseconds: 250),
   /// ),
-  /// wheelMotion: null, // 애니메이션 없음
+  /// wheelMotion: null, // no animation
   /// ```
   ///
-  /// 바꾸면 스크롤 위치는 그대로이고 다음 notch부터 적용된다. 애니메이션하는 것은
-  /// 휠뿐이다 — 드래그, 스크롤바 드래그, 키보드, 트랙패드는 즉시 움직이고 진행 중인
-  /// motion을 멈춘다.
+  /// Changing it keeps the scroll position and takes effect from the next
+  /// notch. Only the wheel animates: drag, scrollbar drag, keyboard and
+  /// trackpad move immediately and stop any motion in progress.
   ///
-  /// notch 하나가 얼마나 가는지는 여기서 정하지 않는다. 앱 전체에 걸리는 것이고,
-  /// `flutter_smooth_wheel_scroll`의 `SmoothWheelBinding`으로 정한다.
+  /// How far one notch goes is not decided here. It applies app-wide and is
+  /// set with `flutter_smooth_wheel_scroll`'s `SmoothWheelBinding`.
   final WheelMotion? wheelMotion;
 
-  /// 플랫폼별 고정폭 글꼴.
+  /// The monospace font for each platform.
   ///
-  /// 하나를 골라 **반드시 지목한다.** family를 지목하는 행위 자체가 앰비언트
-  /// 스타일의 상속을 밀어내기 때문이다.
+  /// It picks one and **always names it**, because the act of naming a family
+  /// is itself what pushes out inheritance from the ambient style.
   static String get defaultMonoFamily {
     if (kIsWeb) return 'monospace';
     return switch (defaultTargetPlatform) {
@@ -200,13 +220,14 @@ class SyntaxText extends StatefulWidget {
     };
   }
 
-  /// 존재할 법한 순서의 고정폭 글꼴 후보들.
+  /// Monospace font candidates, in order of how likely they are to exist.
   ///
-  /// [defaultMonoFamily]가 이 목록에서 하나를 고르므로, 그대로 쓰면 **family가
-  /// 첫 fallback이기도 한** 상태가 된다. 그 모양이 실제로 한 버그를 오래 숨겼다 —
-  /// `fallback.first`가 family처럼 보여서, family가 아예 설정되지 않았다는 사실을
-  /// 아무도 눈치채지 못했다. 그래서 실제로 넘기는 것은 [fallbackWithout]이 고른
-  /// family를 빼고 남긴 목록이다.
+  /// [defaultMonoFamily] picks one from this list, so using the list as is
+  /// leaves the family **also being the first fallback**. That shape really
+  /// did hide a bug for a long time: `fallback.first` looked like the family,
+  /// so nobody noticed that no family was set at all. So what is actually
+  /// passed is the list [fallbackWithout] leaves after removing the chosen
+  /// family.
   static const monoCandidates = [
     'SF Mono',
     'Menlo',
@@ -216,7 +237,7 @@ class SyntaxText extends StatefulWidget {
     'monospace',
   ];
 
-  /// [family]를 뺀 [monoCandidates].
+  /// [monoCandidates] without [family].
   static List<String> fallbackWithout(String family) =>
       monoCandidates.where((f) => f != family).toList(growable: false);
 
@@ -225,25 +246,28 @@ class SyntaxText extends StatefulWidget {
 }
 
 class _SyntaxTextState extends State<SyntaxText> {
-  /// 토큰은 비싸고 안정된 쪽, 스타일은 싸고 테마를 따라가는 쪽이다.
+  /// Tokens are the expensive, stable side; styles are the cheap side that
+  /// follows the theme.
   ///
-  /// **재스캔을 없앨 뿐 그 이상은 아니다.** [SelectableText]는 `textSpan`이
-  /// 이전 것과 같지 않다고 비교될 때마다 컨트롤러를 다시 만들고, [TextSpan]의
-  /// 동등성은 `identical`에서만 짧게 끝난다 — [build]가 토큰마다 새 스팬을
-  /// 만드는 한 그 깊은 비교는 캐시 여부와 무관하게 일어난다.
+  /// **It removes the rescan and nothing more.** [SelectableText] rebuilds its
+  /// controller whenever `textSpan` compares unequal to the previous one, and
+  /// [TextSpan] equality short-circuits only on `identical`: as long as
+  /// [build] makes a new span per token, that deep comparison happens whether
+  /// or not there is a cache.
   ///
-  /// **그리고 그것을 지키는 테스트는 없다.** 캐시를 없애고 [build]에서 매번
-  /// 토크나이즈해도 그려지는 것이 똑같기 때문이다 — 관측 가능한 차이가 없으므로
-  /// 실패할 수 있는 검사를 쓸 수 없다. 스캔 횟수를 세려면 토크나이저를 주입
-  /// 가능하게 만들어야 하는데, 그 이음매의 비용이 이 캐시가 아끼는 것보다 크다.
-  /// 2026-09-06 측정으로 이 저장소에서 가장 큰 파일이 3101 토큰이다.
+  /// **And no test guards it.** Removing the cache and tokenizing in [build]
+  /// every time draws exactly the same thing: with no observable difference,
+  /// no check that can fail can be written. Counting scans would mean making
+  /// the tokenizer injectable, and that seam costs more than this cache saves.
+  /// Measured 2026-09-06, the largest file in this repository is 3101 tokens.
   late List<DartToken> _tokens;
 
   late final _vertical = SmoothScrollController(motion: _motion);
   late final _horizontal = SmoothScrollController(motion: _motion);
 
-  /// 길이 0의 motion은 [ScrollController] 자신의 휠 경로를 탄다. `null`을 위해
-  /// 컨트롤러를 갈아끼우지 않는 이유다 — 갈아끼우면 스크롤 위치를 잃는다.
+  /// A zero-length motion takes [ScrollController]'s own wheel path. That is
+  /// why the controllers are not swapped out for `null`: swapping them loses
+  /// the scroll position.
   static const _instant = WheelMotion.spring(duration: Duration.zero);
 
   WheelMotion get _motion => widget.wheelMotion ?? _instant;
@@ -265,18 +289,20 @@ class _SyntaxTextState extends State<SyntaxText> {
       _horizontal.motion = _motion;
     }
     if (oldWidget.source == widget.source) return;
-    // 소스만 본다. 밝기가 바뀌면 같은 토큰을 다시 칠할 뿐이다.
+    // Only the source counts. A brightness change just repaints the same
+    // tokens.
     _tokens = tokenizeDart(widget.source);
-    // **확인 표시는 그것이 보여진 소스의 것이다.** 리셋하지 않으면 A를 복사하고
-    // 잠깐 뒤 B로 바꿨을 때, 복사된 적 없는 것 옆에 초록 체크가 남는다.
+    // **The confirmation belongs to the source it was shown for.** Without a
+    // reset, copying A and switching to B a moment later leaves a green check
+    // beside something that was never copied.
     _confirmation?.cancel();
     _copied = false;
   }
 
   @override
   void dispose() {
-    // 트리보다 오래 사는 타이머는 그것을 pump한 테스트를 실패시키며, 그것이
-    // 옳은 동작이라 선택 사항이 아니다.
+    // A timer that outlives the tree fails the test that pumped it, and that is
+    // the correct behaviour, so this is not optional.
     _confirmation?.cancel();
     _vertical.dispose();
     _horizontal.dispose();
@@ -287,8 +313,8 @@ class _SyntaxTextState extends State<SyntaxText> {
     Clipboard.setData(ClipboardData(text: widget.source));
     setState(() => _copied = true);
     _confirmation?.cancel();
-    // 유한한 것이 의도다. 불확정 인디케이터에서는 `pumpAndSettle`이 영원히
-    // 정착하지 않는다.
+    // Finite on purpose. With an indeterminate indicator, `pumpAndSettle`
+    // never settles.
     _confirmation = Timer(const Duration(milliseconds: 1400), () {
       if (mounted) setState(() => _copied = false);
     });
@@ -303,9 +329,10 @@ class _SyntaxTextState extends State<SyntaxText> {
     final family = widget.fontFamily ?? SyntaxText.defaultMonoFamily;
 
     Widget code = SelectableText.rich(
-      // 루트 스팬은 자기 스타일을 갖지 않는다. `SelectableText`가 받은 것을
-      // `TextSpan(style: style, children: [주어진 것])`으로 감싸므로, 아래의
-      // face가 모든 토큰이 물려받는 것이자 `EditableText.style`이 보고하는 것이다.
+      // The root span has no style of its own. `SelectableText` wraps what it
+      // is given as `TextSpan(style: style, children: [what was given])`, so
+      // the face below is both what every token inherits and what
+      // `EditableText.style` reports.
       TextSpan(
         children: [
           for (final token in _tokens)
@@ -324,20 +351,22 @@ class _SyntaxTextState extends State<SyntaxText> {
 
     code = Padding(padding: widget.padding, child: code);
 
-    // 가로는 언제나. 줄바꿈된 줄은 다른 줄이다.
+    // Horizontal, always. A wrapped line is a different line.
     code = SingleChildScrollView(
       controller: _horizontal,
       scrollDirection: Axis.horizontal,
       child: code,
     );
 
-    // Material [Scrollbar]는 painter에 `MediaQuery.paddingOf`를 그대로 넣고 끌
-    // 파라미터가 없다. 그 값은 **화면**의 inset인데 바는 이 위젯 영역 안에
-    // 그려지므로, 위젯이 화면 중간에 있어도 바가 그만큼 안으로 밀려 마지막 줄에
-    // 겹쳤다(#31). 바에게만 inset을 지우고, 그 안의 코드에는 되돌려 준다 — 선택
-    // 툴바와 핸들은 화면의 inset을 봐야 한다. inset을 피하는 것은 앱의
-    // 몫이다(ADR-0004). [Builder] 안에서 읽는 것은, 여기서 읽으면 키보드가
-    // 오르내리는 매 프레임 이 위젯 전체가 다시 지어지기 때문이다.
+    // Material [Scrollbar] feeds `MediaQuery.paddingOf` straight into its
+    // painter, with no parameter to turn it off. That value is the **screen**'s
+    // inset, but the bar is drawn inside this widget's area, so even with the
+    // widget mid-screen the bar was pushed in by that much and overlapped the
+    // last line (#31). The inset is removed for the bar only and given back to
+    // the code inside it: the selection toolbar and handles must see the
+    // screen's inset. Avoiding the inset is the app's job (ADR-0004). It is
+    // read inside a [Builder] because reading it here would rebuild this whole
+    // widget on every frame of the keyboard rising or falling.
     Widget insetFree(Widget Function(Widget child) bar, Widget child) =>
         Builder(
           builder: (context) {
@@ -355,10 +384,12 @@ class _SyntaxTextState extends State<SyntaxText> {
         );
 
     if (widget.scrollable) {
-      // 데스크톱에서 Material은 세로 [Scrollable]마다 바를 하나 더 붙인다. 바로
-      // 위의 바와 같은 컨트롤러를 그려 thumb이 두 번 칠해지므로, 이 뷰에서만
-      // 끄고 앱의 나머지 [ScrollBehavior]는 물려받는다(#32). [EditableText]는
-      // 자기 바를 스스로 다시 켜므로 여기에 걸리지 않는다.
+      // On desktop, Material attaches one more bar to every vertical
+      // [Scrollable]. It draws the same controller as the bar just above, so
+      // the thumb is painted twice; it is turned off for this view only, and
+      // the rest of the app's [ScrollBehavior] is inherited (#32).
+      // [EditableText] turns its own bar back on itself, so it is not caught
+      // by this.
       code = insetFree(
         (child) => Scrollbar(controller: _vertical, child: child),
         ScrollConfiguration(
@@ -368,13 +399,17 @@ class _SyntaxTextState extends State<SyntaxText> {
       );
     }
 
-    // 소비자가 정하지 않은 것만 채운다(ADR-0004). 테마가 아니라 가로 바의
-    // 파라미터로 넘기는 것은, 테마로 채우면 세로 바까지 늘 보이게 되기 때문이다.
+    // Fill only what the consumer has not set (ADR-0004). These are passed as
+    // parameters of the horizontal bar rather than through the theme because
+    // filling them through the theme would keep the vertical bar always
+    // visible too.
     final bars = ScrollbarTheme.of(context);
     final android = theme.platform == TargetPlatform.android;
 
-    // 가로 바는 세로 뷰보다 **바깥**이다. 안에 두면 가로 뷰의 높이가 내용 전체의
-    // 높이라 바가 내용 맨 끝에 그려지고, 세로를 끝까지 내려야 보인다.
+    // The horizontal bar is **outside** the vertical view. Inside it, the
+    // horizontal view's height is the full content height, so the bar is drawn
+    // at the very end of the content and only shows once you scroll all the
+    // way down.
     code = insetFree(
       (child) => Scrollbar(
         controller: _horizontal,
@@ -388,11 +423,12 @@ class _SyntaxTextState extends State<SyntaxText> {
 
     final background = palette.background;
 
-    // 배경이 칠해지면 이 위젯 자신의 컨트롤도 팔레트를 따라야 한다. 앱 테마의
-    // `onSurfaceVariant`는 **앱의 surface에 대고** 고른 색이라, 남의 배경 위에서는
-    // 아무것도 보장하지 않는다 — 라이트 앱에 어두운 프리셋을 얹으면 복사 버튼과
-    // 스크롤바가 그 배경에 묻힌다. 배경을 준 팔레트는 전경색도 함께 주므로,
-    // 그것에서 가져온다.
+    // Once a background is painted, this widget's own controls must follow the
+    // palette too. The app theme's `onSurfaceVariant` was chosen **against the
+    // app's surface**, so on someone else's background it guarantees nothing:
+    // put a dark preset on a light app and the copy button and scrollbars sink
+    // into that background. A palette that gives a background also gives the
+    // foreground colours, so take them from it.
     final chrome = background == null
         ? scheme.onSurfaceVariant
         : palette.comment?.color ??
@@ -426,16 +462,18 @@ class _SyntaxTextState extends State<SyntaxText> {
 
     if (background == null) return code;
 
-    // **[Stack]보다 바깥이다.** [Stack]의 기본 `fit`은 loose라, 안에 두면 배경이
-    // 코드 내용의 크기로 쪼그라들어 코드보다 넓은 pane에 칠하지 않은 자리가
-    // 남는다. 여기서는 부모의 제약을 그대로 받는다 — 제약이 빡빡하면 pane을
-    // 채우고, `scrollable: false`로 세로가 shrink-wrap이면 배경도 같이 줄어든다.
-    // (그 두 경우가 각각 테스트에 있다.)
+    // **Outside the [Stack].** [Stack]'s default `fit` is loose, so inside it
+    // the background would shrink to the size of the code content and leave
+    // unpainted space in a pane wider than the code. Here it takes the parent's
+    // constraints as they are: with tight constraints it fills the pane, and
+    // with `scrollable: false` shrink-wrapping vertically, the background
+    // shrinks with it. (Each of those two cases has a test.)
     code = ColoredBox(color: background, child: code);
 
-    // 스크롤바는 터치에서 유일한 가로 어포던스다. 이 위젯의 doc이 그렇게 적어
-    // 두었으므로, 배경을 바꾸면서 그것을 배경에 묻히게 둘 수 없다. 색만 덮고 앱의
-    // 나머지 필드는 남긴다 — 테마는 합쳐지지 않고 가장 가까운 것 하나만 읽힌다.
+    // The scrollbar is the only horizontal affordance on touch. This widget's
+    // doc says so, so changing the background cannot be allowed to bury it in
+    // the background. Only the colour is overridden and the app's other fields
+    // are kept: themes do not merge, and only the nearest one is read.
     return ScrollbarTheme(
       data: bars.copyWith(
         thumbColor: WidgetStatePropertyAll(chrome.withAlpha(115)),

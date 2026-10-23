@@ -11,7 +11,7 @@ colour from the palette, not from the app's theme, and only their colour.
 
 Stated as one rule in [ADR-0002](../../adr/0002-a-palette-carries-its-own-background.md),
 extended in [ADR-0003](../../adr/0003-the-derived-default-borrows-the-app-s-accent-diluted.md)
-(*같은 규칙이다*) and narrowed to colour in
+(*it is the same rule*) and narrowed to colour in
 [ADR-0004](../../adr/0004-the-widget-fills-only-the-scrollbar-fields-nobody-set.md).
 
 ## Why it is cross-cutting
@@ -58,9 +58,8 @@ app's Android opt-in into 0.0 (ADR-0004, *Context*).
   (ADR-0002, 2026-09-07; commit `9cc268c`).
 - ADR-0004 (#29, 2026-10-19) found the "controls follow the palette" sentence
   implemented as a whole-theme replacement, and narrowed it to colour.
-- Tests: `test/widget/presets_test.dart` group `배경`;
-  `test/widget/syntax_text_test.dart` `복사 아이콘이 앱 테마가 아니라 팔레트를
-  따라간다`, `배경 있는 프리셋이 앱의 스크롤바 테마를 지우지 않는다`.
+- Tests: `test/widget/presets_test.dart` group `background`;
+  `test/widget/syntax_text_test.dart` `the copy icon follows the palette, not the app theme`, `a preset with a background does not wipe the app's scrollbar theme`.
 
 ## Where it will recur
 

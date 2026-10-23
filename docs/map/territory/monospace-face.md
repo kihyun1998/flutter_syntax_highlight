@@ -9,8 +9,7 @@ not repeat it, and it takes font settings as separate values rather than a
 
 ## Governing decisions
 
-**None.** The rules come from the `SyntaxText` class doc (*글꼴은 `TextStyle`
-하나가 아니라 숫자 몇 개로 받는다*) and the `defaultMonoFamily` /
+**None.** The rules come from the `SyntaxText` class doc (*The font is taken as a few numbers, not one `TextStyle`*) and the `defaultMonoFamily` /
 `monoCandidates` docs.
 
 ## Design model
@@ -34,7 +33,7 @@ From source only:
   `fontFamilyFallback`, `fontSize`, `height`, `defaultMonoFamily`,
   `monoCandidates`, `fallbackWithout`; `_SyntaxTextState.build` root
   `TextStyle`.
-- Tests: `test/widget/syntax_text_test.dart` group `고정폭`.
+- Tests: `test/widget/syntax_text_test.dart` group `monospace`.
 
 ## Reference behaviour
 

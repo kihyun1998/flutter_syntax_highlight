@@ -1,85 +1,98 @@
-# flutter_syntax_highlight 예제
+# flutter_syntax_highlight example
 
-한 화면짜리다. 아래 것들을 **눈으로** 보이는 것이 목적이다.
+One screen. Its purpose is to show the things below **to the eye**.
 
-## 1. 중첩 보간이 제대로 그려진다
+## 1. Nested interpolation is drawn correctly
 
-보여주는 조각에 이 줄이 들어 있다:
+The sample shown contains this line:
 
 ```dart
 return '${value ? '✓' : '✗'} $key\t$tidy\n$rows';
 ```
 
-안쪽의 `'✓'`와 `'✗'`가 **문자열로** 그려진다. 따옴표를 단순히 짝짓는 스캐너는
-정확히 그 반대로 칠한다 — 보간 안의 코드를 문자열로, 문자열을 코드로. 이 패키지가
-존재하는 이유이고, 스크린샷이 가리켜야 하는 글자다.
+The inner `'✓'` and `'✗'` are drawn **as strings**. A scanner that simply pairs
+quotes paints exactly the opposite — the code inside the interpolation as
+string, and the string as code. It is the reason this package exists, and the
+glyph a screenshot should point at.
 
-## 2. 파생 기본값이 앱의 스킴에서 나온다
+## 2. The derived default comes from the app's scheme
 
-앱바의 **시드 스와치**로 확인한다. 시드를 바꾸면 문자열과 호출 이름의 색이 스킴을
-따라 같이 움직인다 — 이 패키지는 앱의 색상을 빌릴 뿐 자기 색상을 도입하지 않는다.
+Check it with the **seed swatches** in the app bar. Change the seed and the
+colours of strings and call names move along with the scheme — this package
+only borrows the app's hues and introduces no hue of its own.
 
-마지막 칸(무채색)이 그 주장의 반대편이다: 빌릴 색이 없으면 아무 색도 나오지
-않는다.
+The last swatch (achromatic) is the other side of that claim: with no colour to
+borrow, no colour comes out.
 
-## 3. 그리고 라이트와 다크 양쪽에서 맞는다
+## 3. And it is right in both light and dark
 
-앱바의 밝기 토글로 확인한다. 기본 팔레트는 소비자의 `ColorScheme`에서 파생되므로
-설정 없이 양쪽에서 맞는다.
+Check it with the brightness toggle in the app bar. The default palette is
+derived from the consumer's `ColorScheme`, so it is right in both with nothing
+to configure.
 
-같은 토글이 프리셋과의 차이도 보인다: 드롭다운에서 `oneDark`를 고르면 코드 블록만
-자기 배경을 들고 앱에서 떨어져 나온다. 파생 기본값은 그러지 않는다 — 배경을 칠하지
-않고 앱의 surface를 그대로 쓰기 때문이다.
+The same toggle also shows the difference from the presets: pick `oneDark` in
+the dropdown and only the code block carries its own background and stands
+apart from the app. The derived default does not — it paints no background and
+uses the app's surface as is.
 
-이 문단의 앞선 판본은 다른 것을 주장했다: *실명 프리셋은 반대 밝기에서 보이지
-않는다*며 `cobalt2`의 명도비를 1.05라고 적었다. **수치는 맞았고 재는 대상이
-틀렸다** — 그때 팔레트에 배경 필드가 없어서 흰 본문을 *앱의* 라이트 배경에 대고
-쟀던 것이다. 지금은 자기 배경 `#193549` 위에 그려지고, 그 대비는 12.75다.
-경위는 [ADR-0002](../docs/adr/0002-a-palette-carries-its-own-background.md)에 있다.
+An earlier version of this paragraph claimed something else: that *a named
+preset is invisible in the opposite brightness*, and it gave `cobalt2`'s
+contrast ratio as 1.05. **The number was right and the thing measured against
+was wrong** — at the time the palette had no background field, so white body
+text was measured against *the app's* light background. Now it is drawn on its
+own background `#193549`, and that contrast is 12.75. The account is in
+[ADR-0002](../docs/adr/0002-a-palette-carries-its-own-background.md).
 
-짝으로 싣는 이유는 남았지만 근거가 바뀌었다: 가독성이 아니라 **밝기 취향**이다.
-라이트 앱에 `oneDark`를 얹으면 읽기는 잘 읽히지만 코드 블록만 어둡다.
+The reason for shipping pairs remains, but its grounds changed: not legibility
+but **brightness preference**. `oneDark` in a light app reads fine, but only
+the code block is dark.
 
-## 4. 마우스 휠이 미끄러진다
+## 4. The mouse wheel glides
 
-앱바의 **마우스 아이콘**이 휠 데모로 바꾼다. 위의 조각은 800×600 창 안에 다
-들어가서 어느 축으로도 스크롤되지 않으므로, 데모는 창보다 길고 넓은 조각을 쓴다.
-휠로 굴리고, Shift+휠로 옆으로 민다.
+The **mouse icon** in the app bar switches to the wheel demo. The sample above
+fits entirely in an 800×600 window and does not scroll on either axis, so the
+demo uses a sample longer and wider than the window. Roll the wheel, and push
+sideways with Shift+wheel.
 
-드롭다운이 `wheelMotion`을 바꾼다: 기본 spring, 튀는 spring, curve, lerp, 그리고
-`null`(애니메이션 없음). 바꿔도 스크롤 위치는 그대로라 같은 자리에서 비교할 수 있다.
-첫 화면은 스크린샷이 가리키는 것이라 손대지 않았다.
+The dropdown changes `wheelMotion`: the default spring, a bouncy spring, curve,
+lerp, and `null` (no animation). Switching keeps the scroll position, so you can
+compare at the same spot. The first screen is what the screenshot points at, so
+it was left untouched.
 
-## 팔레트 목록은 이 예제가 직접 들고 있다
+## This example holds the palette list itself
 
-패키지는 이름으로 찾는 룩업을 두지 않는다 — 레지스트리를 만들지 않기로 한
-결정이다. 그래서 드롭다운의 열한 항목은 `lib/main.dart`의 `palettes` 상수다.
-프리셋을 고르게 하려는 소비자가 하게 되는 일이 정확히 이것이다.
+The package has no lookup by name — it was a decision not to build a registry.
+So the eleven entries in the dropdown are the `palettes` constant in
+`lib/main.dart`. This is exactly what a consumer who wants to offer a choice of
+presets ends up doing.
 
-## 실행
+## Running
 
 ```
 cd example
-flutter run -d macos      # 또는 -d chrome
+flutter run -d macos      # or -d chrome
 ```
 
-플랫폼 폴더는 macOS와 web만 들어 있다. 다른 플랫폼이 필요하면:
+Only the macOS and web platform folders are included. If you need another
+platform:
 
 ```
 flutter create --platforms=android,ios,windows,linux .
 ```
 
-## 테스트가 없는 이유
+## Why there are no tests
 
-루트에서 돌리는 `flutter test`는 이 디렉터리를 **돌지 않는다**(실패하는 테스트를
-심어 확인함 — 그때 루트의 116개가 그대로 통과했다). 여기에 테스트를 두면 아무도 돌리지 않는 테스트가
-되고, 그것은 없느니만 못하다.
+`flutter test` run from the root **does not run** this directory (confirmed by
+planting a failing test — the root's 116 still passed as they were). A test put
+here would be a test nobody runs, and that is worse than none.
 
-컴파일은 덮인다 — 루트의 `flutter analyze`가 이 디렉터리까지 본다. 오류를 심어
-확인했다. `analyze`는 **트리를 걷는다**: 한때 이 예제를 pub 워크스페이스로 묶고
-그것이 커버리지의 이유라고 적어 두었는데, 워크스페이스를 지우고 다시 재 보니
-똑같이 잡혔다. 거짓 정당화였고, 워크스페이스는 뺐다.
+Compilation is covered — the root's `flutter analyze` looks at this directory
+too. Confirmed by planting an error. `analyze` **walks the tree**: at one point
+this example was bound into a pub workspace and that was written down as the
+reason for the coverage, but removing the workspace and measuring again, it was
+caught all the same. It was a false justification, and the workspace was taken
+out.
 
-`dart format`도 덮인다. 게이트가 `lib test example/lib`이다 — 처음에는 `lib test`라
-이 디렉터리가 빠져 있었고, #21이 넓혔다. 이 코드는 pub.dev의 example 탭에 그대로
-실려 소비자가 읽는다.
+`dart format` is covered too. The gate is `lib test example/lib` — at first it
+was `lib test` and this directory was left out, and #21 widened it. This code
+is shown as is on pub.dev's example tab, where consumers read it.

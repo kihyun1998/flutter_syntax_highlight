@@ -7,8 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// 여덟 kind가 전부 나오는 조각. 가드가 닿지 않는 분기는 지키지 못하므로,
-/// 아래 검사들이 `SyntaxPalette.styleFor`의 모든 갈래를 지나가게 한다.
+/// A snippet in which all eight kinds appear. A guard cannot protect a branch
+/// it does not reach, so this makes the checks below pass through every arm
+/// of `SyntaxPalette.styleFor`.
 const everyKind =
     "// a comment\n"
     "class Sentinel {\n"
@@ -16,7 +17,8 @@ const everyKind =
     "  var n = f(1);\n"
     "}\n";
 
-/// 비례 글꼴을 테마에 심는다. 고정폭 검사가 잡아야 하는 것이 정확히 이것이다.
+/// Plants a proportional font in the theme. This is exactly what the monospace
+/// checks must catch.
 const chromeFont = 'NotAMonospaceFace';
 
 Future<void> pump(WidgetTester tester, Widget child, {Brightness? b}) async {
@@ -35,7 +37,7 @@ Future<void> pump(WidgetTester tester, Widget child, {Brightness? b}) async {
   await tester.pumpAndSettle();
 }
 
-/// 잎 스팬들. `EditableText.style`이 아니라 **여기**를 읽는 것이 요점이다.
+/// The leaf spans. The point is to read **here**, not `EditableText.style`.
 List<TextSpan> leavesOf(WidgetTester tester) {
   final selectable = tester.widget<SelectableText>(find.byType(SelectableText));
   final leaves = <TextSpan>[];
@@ -47,36 +49,41 @@ List<TextSpan> leavesOf(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('픽스처가 여덟 kind를 전부 낸다', (tester) async {
-    // 부수 조건. 이 조각이 어떤 kind를 놓치면 아래 검사들이 그 갈래를 지나지
-    // 않으면서 초록으로 남는다.
+  testWidgets('the fixture yields all eight kinds', (tester) async {
+    // A side condition. If this snippet misses a kind, the checks below stay
+    // green without passing through that arm.
     expect(
       tokenizeDart(everyKind).map((t) => t.kind).toSet(),
       DartTokenKind.values.toSet(),
     );
   });
 
-  group('하이라이터는 붙여넣을 것을 바꾸지 못한다', () {
+  group('the highlighter cannot change what gets pasted', () {
     const tricky =
         "// somebody's file\r\n"
         "class Sentinel {\r\n"
         "  final s = '\${a ?? ''}';\r\n"
         "}\r\n";
 
-    testWidgets('렌더된 트리를 평탄화하면 정확히 그 바이트다', (tester) async {
+    testWidgets('flattening the rendered tree gives exactly those bytes', (
+      tester,
+    ) async {
       await pump(tester, const SyntaxText(tricky));
       final selectable = tester.widget<SelectableText>(
         find.byType(SelectableText),
       );
-      // `includeSemanticsLabels: false`는 취향이 아니다 — 클립보드가 읽는
-      // 문자열을 만들 때 컨트롤러가 하는 바로 그 호출이다.
+      // `includeSemanticsLabels: false` is not a matter of taste — it is the
+      // very call the controller makes when building the string the
+      // clipboard reads.
       expect(
         selectable.textSpan!.toPlainText(includeSemanticsLabels: false),
         tricky,
       );
     });
 
-    testWidgets('그리고 복사 컨트롤이 같은 것을 클립보드에 올린다', (tester) async {
+    testWidgets('and the copy control puts the same thing on the clipboard', (
+      tester,
+    ) async {
       String? copied;
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform,
@@ -101,17 +108,20 @@ void main() {
     });
   });
 
-  group('고정폭', () {
-    testWidgets('겉포장이 고정폭을 지목한다', (tester) async {
+  group('monospace', () {
+    testWidgets('the wrapper names a monospace face', (tester) async {
       await pump(tester, const SyntaxText(everyKind));
       final editable = tester.widget<EditableText>(find.byType(EditableText));
       expect(editable.style.fontFamily, isNotNull);
       expect(editable.style.fontFamily, isNot(chromeFont));
     });
 
-    testWidgets('fontFamily를 주지 않아도 non-null family가 지목된다', (tester) async {
-      // nullable로 연 것이 옛 버그를 되살릴 새 경로다. null이 "설정하지 않음"으로
-      // 해석되면 `inherit: true`가 앰비언트 스타일을 머지해 비례 글꼴로 그려진다.
+    testWidgets('a non-null family is named even with no fontFamily given', (
+      tester,
+    ) async {
+      // Opening it up as nullable is a new path that could revive the old
+      // bug. If null is read as "not set", `inherit: true` merges the ambient
+      // style and it draws in a proportional font.
       await pump(tester, const SyntaxText(everyKind));
       final style = tester
           .widget<EditableText>(find.byType(EditableText))
@@ -120,25 +130,27 @@ void main() {
       expect(style.fontFamily, isNotNull);
       expect(style.fontFamilyFallback, isNotNull);
 
-      // family가 fallback에도 있으면 `fallback.first`가 family처럼 보여서,
-      // family가 아예 설정되지 않았다는 사실을 가린다. 그 모양이 버그를 숨겼다.
+      // If the family is also in the fallback, `fallback.first` looks like the
+      // family and hides the fact that no family was set at all. That shape
+      // hid the bug.
       expect(style.fontFamilyFallback, isNot(contains(style.fontFamily)));
 
-      // 그리고 해석은 반드시 제네릭에서 끝난다 — family 자체가 제네릭이거나
-      // (Android가 그렇다), 아니면 fallback의 마지막이 제네릭이거나.
+      // And resolution must end at a generic — either the family itself is
+      // generic (as on Android), or the last of the fallback is.
       expect(
         style.fontFamily == 'monospace' ||
             style.fontFamilyFallback!.last == 'monospace',
         isTrue,
         reason:
-            '고정폭 해석이 제네릭으로 끝나지 않는다 — 목록의 어느 글꼴도 '
-            '없는 기기에서 비례 글꼴로 떨어진다',
+            'monospace resolution does not end at a generic — on a device '
+            'with none of the listed fonts it falls to a proportional font',
       );
     });
 
-    test('플랫폼마다 고정폭을 지목하고, 그것을 fallback에서 뺀다', () {
-      // 위젯 테스트는 Android로 돌므로 한 갈래만 지나간다. 나머지 갈래도 같은
-      // 불변식을 지키는지는 여기서 본다.
+    test('names a monospace face per platform and leaves it out of the '
+        'fallback', () {
+      // Widget tests run as Android, so only one arm is exercised. Whether
+      // the other arms keep the same invariant is checked here.
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
       for (final platform in TargetPlatform.values) {
         debugDefaultTargetPlatformOverride = platform;
@@ -149,16 +161,17 @@ void main() {
         expect(
           family == 'monospace' || fallback.last == 'monospace',
           isTrue,
-          reason: '$platform에서 해석이 제네릭으로 끝나지 않는다',
+          reason: 'resolution does not end at a generic on $platform',
         );
       }
     });
 
-    testWidgets('그리고 어떤 잎도 자기 family를 들이지 않는다', (tester) async {
-      // 위 검사는 **겉포장**을 읽는다. `SelectableText`는 받은 스팬 트리를
-      // `TextSpan(style: ..., children: [주어진 것])`으로 감싸므로, 잎이 비례
-      // 글꼴을 지목해도 위 검사는 초록으로 남는다. 그것이 이 저장소가 한 번
-      // 지불한 버그이고, 이 검사는 대체가 아니라 추가다.
+    testWidgets('and no leaf brings in a family of its own', (tester) async {
+      // The check above reads **the wrapper**. `SelectableText` wraps the span
+      // tree it is given in `TextSpan(style: ..., children: [what was
+      // given])`, so even if a leaf names a proportional font the check above
+      // stays green. That is the bug this repository has paid for once, and
+      // this check is an addition, not a replacement.
       await pump(tester, const SyntaxText(everyKind));
       final families = <String>[];
       final foreign = <InlineSpan>[];
@@ -176,63 +189,77 @@ void main() {
             return true;
           });
       expect(families, isEmpty);
-      // `TextSpan`이 아닌 자식은 복사되는 텍스트에 `\u{FFFC}`를 써 넣는다.
+      // A child that is not a `TextSpan` writes `\u{FFFC}` into the copied
+      // text.
       expect(foreign, isEmpty);
     });
   });
 
-  group('팔레트가 실제로 그려진다 — 객체가 아니라 잎에서 읽는다', () {
-    testWidgets('넘긴 팔레트의 색이 잎에 나타난다', (tester) async {
-      const marker = Color(0xFF123456);
-      await pump(
+  group(
+    'the palette is actually drawn — read from the leaves, not the object',
+    () {
+      testWidgets('the given palette\'s colour shows up on the leaves', (
         tester,
-        const SyntaxText(
-          everyKind,
-          palette: SyntaxPalette(comment: TextStyle(color: marker)),
-        ),
-      );
-      final commentLeaves = leavesOf(
+      ) async {
+        const marker = Color(0xFF123456);
+        await pump(
+          tester,
+          const SyntaxText(
+            everyKind,
+            palette: SyntaxPalette(comment: TextStyle(color: marker)),
+          ),
+        );
+        final commentLeaves = leavesOf(
+          tester,
+        ).where((s) => s.text!.contains('a comment')).toList();
+        expect(commentLeaves, isNotEmpty);
+        expect(commentLeaves.single.style?.color, marker);
+      });
+
+      testWidgets('when none is given, one derived from ColorScheme is used', (
         tester,
-      ).where((s) => s.text!.contains('a comment')).toList();
-      expect(commentLeaves, isNotEmpty);
-      expect(commentLeaves.single.style?.color, marker);
-    });
+      ) async {
+        await pump(tester, const SyntaxText(everyKind));
+        final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4));
+        final expected = SyntaxPalette.fromColorScheme(scheme);
+        final stringLeaf = leavesOf(
+          tester,
+        ).firstWhere((s) => s.text!.startsWith("'a"));
+        expect(
+          stringLeaf.style?.color,
+          expected.styleFor(DartTokenKind.string)!.color,
+        );
+      });
 
-    testWidgets('주지 않으면 ColorScheme에서 파생된 것이 쓰인다', (tester) async {
-      await pump(tester, const SyntaxText(everyKind));
-      final scheme = ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4));
-      final expected = SyntaxPalette.fromColorScheme(scheme);
-      final stringLeaf = leavesOf(
+      testWidgets('changing brightness changes the drawn colour with it', (
         tester,
-      ).firstWhere((s) => s.text!.startsWith("'a"));
-      expect(
-        stringLeaf.style?.color,
-        expected.styleFor(DartTokenKind.string)!.color,
-      );
-    });
+      ) async {
+        await pump(tester, const SyntaxText(everyKind));
+        final light = leavesOf(
+          tester,
+        ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
 
-    testWidgets('밝기를 바꾸면 그려진 색이 따라 바뀐다', (tester) async {
-      await pump(tester, const SyntaxText(everyKind));
-      final light = leavesOf(
-        tester,
-      ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
+        await pump(tester, const SyntaxText(everyKind), b: Brightness.dark);
+        final dark = leavesOf(
+          tester,
+        ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
 
-      await pump(tester, const SyntaxText(everyKind), b: Brightness.dark);
-      final dark = leavesOf(
-        tester,
-      ).firstWhere((s) => s.text!.startsWith("'a")).style?.color;
+        expect(light, isNotNull);
+        expect(
+          dark,
+          isNot(light),
+          reason:
+              'this is why the derived default exists — right on both sides '
+              'with no setup',
+        );
+      });
+    },
+  );
 
-      expect(light, isNotNull);
-      expect(
-        dark,
-        isNot(light),
-        reason: '파생 기본값의 존재 이유가 이것이다 — 설정 없이 양쪽에서 맞는다',
-      );
-    });
-  });
-
-  group('배경', () {
-    testWidgets('팔레트가 배경을 주면 그 색이 칠해진다', (tester) async {
+  group('background', () {
+    testWidgets('when the palette gives a background, that colour is painted', (
+      tester,
+    ) async {
       const marker = Color(0xFF123456);
       await pump(
         tester,
@@ -251,9 +278,9 @@ void main() {
       );
     });
 
-    testWidgets('배경을 주지 않으면 아무것도 칠하지 않는다', (tester) async {
-      // 그때 뒤에 있는 것은 앱의 surface다. 여기서 무엇이든 칠하면 파생 기본값이
-      // "색상을 더하지 않는다"는 결정을 어긴다.
+    testWidgets('with no background given, nothing is painted', (tester) async {
+      // What lies behind then is the app's surface. Painting anything here
+      // breaks the derived default's decision to be "hue-neutral".
       await pump(tester, const SyntaxText(everyKind));
 
       final painted = tester.widgetList<ColoredBox>(
@@ -265,9 +292,11 @@ void main() {
       expect(painted, isEmpty);
     });
 
-    testWidgets('배경이 스크롤 뷰보다 바깥이라 pane 전체를 덮는다', (tester) async {
-      // 안쪽에 두면 스크롤되는 내용의 크기만큼만 칠해져, 코드보다 넓은 pane에서
-      // 칠하지 않은 띠가 남는다. 코드는 한 줄인데 pane은 400×300이다.
+    testWidgets('the background sits outside the scroll view, so it covers the '
+        'whole pane', (tester) async {
+      // Placed inside, only the size of the scrolled content is painted, and a
+      // pane wider than the code is left with an unpainted band. The code is
+      // one line, but the pane is 400×300.
       const marker = Color(0xFF123456);
       await pump(
         tester,
@@ -286,9 +315,12 @@ void main() {
       expect(box, const Size(400, 300));
     });
 
-    testWidgets('scrollable: false면 배경도 세로로 같이 줄어든다', (tester) async {
-      // 글 안의 코드 블록으로 쓰는 경우다. 배경이 pane 높이를 채워 버리면 그
-      // 용도가 사라진다 — 위 검사와 반대 방향이고, 둘 다 필요하다.
+    testWidgets('scrollable: false shrinks the background vertically too', (
+      tester,
+    ) async {
+      // This is the case of a code block inside prose. If the background fills
+      // the pane's height, that use is gone — the opposite direction to the
+      // check above, and both are needed.
       const marker = Color(0xFF123456);
       await pump(
         tester,
@@ -312,10 +344,12 @@ void main() {
       expect(box.height, greaterThan(0));
     });
 
-    testWidgets('복사 아이콘이 앱 테마가 아니라 팔레트를 따라간다', (tester) async {
-      // 앱 테마의 `onSurfaceVariant`는 **앱의 surface에 대고** 고른 색이라, 남의
-      // 배경 위에서는 아무것도 보장하지 않는다. 라이트 앱 + 어두운 프리셋이
-      // 정확히 그 경우다.
+    testWidgets('the copy icon follows the palette, not the app theme', (
+      tester,
+    ) async {
+      // The app theme's `onSurfaceVariant` is a colour picked **against the
+      // app's surface**, so on someone else's background it guarantees
+      // nothing. A light app + a dark preset is exactly that case.
       const dim = Color(0xFF7F848E);
       await pump(
         tester,
@@ -334,8 +368,8 @@ void main() {
     });
   });
 
-  group('스크롤', () {
-    testWidgets('가로는 항상 위젯이 소유한다', (tester) async {
+  group('scrolling', () {
+    testWidgets('the widget always owns horizontal', (tester) async {
       await pump(tester, const SyntaxText(everyKind, scrollable: false));
       final views = tester.widgetList<SingleChildScrollView>(
         find.byType(SingleChildScrollView),
@@ -343,7 +377,9 @@ void main() {
       expect(views.map((v) => v.scrollDirection), contains(Axis.horizontal));
     });
 
-    testWidgets('scrollable: false면 세로 스크롤이 없다', (tester) async {
+    testWidgets('with scrollable: false there is no vertical scroll', (
+      tester,
+    ) async {
       await pump(tester, const SyntaxText(everyKind, scrollable: false));
       final views = tester.widgetList<SingleChildScrollView>(
         find.byType(SingleChildScrollView),
@@ -354,31 +390,37 @@ void main() {
       );
     });
 
-    testWidgets('scrollable: true면 자기 영역 안에서 세로로 스크롤한다', (tester) async {
-      final long = List.generate(200, (i) => 'final x$i = $i;').join('\n');
-      await pump(tester, SyntaxText(long));
-      final views = tester.widgetList<SingleChildScrollView>(
-        find.byType(SingleChildScrollView),
-      );
-      expect(views.map((v) => v.scrollDirection), contains(Axis.vertical));
+    testWidgets(
+      'with scrollable: true it scrolls vertically within its own area',
+      (tester) async {
+        final long = List.generate(200, (i) => 'final x$i = $i;').join('\n');
+        await pump(tester, SyntaxText(long));
+        final views = tester.widgetList<SingleChildScrollView>(
+          find.byType(SingleChildScrollView),
+        );
+        expect(views.map((v) => v.scrollDirection), contains(Axis.vertical));
 
-      final vertical = tester.widget<SingleChildScrollView>(
-        find.byWidgetPredicate(
-          (w) =>
-              w is SingleChildScrollView && w.scrollDirection == Axis.vertical,
-        ),
-      );
-      // 컨트롤러를 패키지가 이름 붙여 소유한다. `primary`가 켜지면 두 스크롤
-      // 뷰가 같은 `PrimaryScrollController`를 주장해 framework가 assert한다.
-      expect(vertical.controller, isNotNull);
-      expect(vertical.primary, isNot(true));
-    });
+        final vertical = tester.widget<SingleChildScrollView>(
+          find.byWidgetPredicate(
+            (w) =>
+                w is SingleChildScrollView &&
+                w.scrollDirection == Axis.vertical,
+          ),
+        );
+        // The package owns the controller by name. With `primary` on, two
+        // scroll views claim the same `PrimaryScrollController` and the
+        // framework asserts.
+        expect(vertical.controller, isNotNull);
+        expect(vertical.primary, isNot(true));
+      },
+    );
   });
 
-  group('source가 바뀌면 다시 토크나이즈한다', () {
-    testWidgets('새 소스가 그려진다', (tester) async {
-      // 이 검사가 없으면 `didUpdateWidget`의 재토크나이즈를 통째로 지워도
-      // 전 스위트가 초록이다 — 소스가 바뀌었는데 옛 코드가 그려지는 상태다.
+  group('re-tokenizes when source changes', () {
+    testWidgets('the new source is drawn', (tester) async {
+      // Without this check, deleting the re-tokenize in `didUpdateWidget`
+      // outright leaves the whole suite green — the source changed but the old
+      // code is drawn.
       await pump(tester, const SyntaxText('const first = 1;'));
       String drawn() => tester
           .widget<SelectableText>(find.byType(SelectableText))
@@ -390,8 +432,9 @@ void main() {
       expect(drawn(), 'const second = 2;');
     });
 
-    testWidgets('그리고 새 소스의 kind로 칠해진다', (tester) async {
-      // 텍스트만 바뀌고 토큰이 옛것으로 남는 경우를 가른다.
+    testWidgets('and painted with the new source\'s kinds', (tester) async {
+      // Separates out the case where only the text changes and the tokens stay
+      // stale.
       await pump(tester, const SyntaxText('plain_identifier'));
       expect(leavesOf(tester).map((s) => s.text), ['plain_identifier']);
 
@@ -401,8 +444,8 @@ void main() {
     });
   });
 
-  group('소비자가 넘긴 값이 실제로 쓰인다', () {
-    testWidgets('글꼴 크기와 줄 높이', (tester) async {
+  group('values the consumer passes are actually used', () {
+    testWidgets('font size and line height', (tester) async {
       await pump(
         tester,
         const SyntaxText(everyKind, fontSize: 33, height: 2.5),
@@ -414,7 +457,7 @@ void main() {
       expect(style.height, 2.5);
     });
 
-    testWidgets('글꼴 이름과 fallback', (tester) async {
+    testWidgets('font name and fallback', (tester) async {
       await pump(
         tester,
         const SyntaxText(
@@ -430,7 +473,7 @@ void main() {
       expect(style.fontFamilyFallback, ['AlsoGiven']);
     });
 
-    testWidgets('여백', (tester) async {
+    testWidgets('padding', (tester) async {
       await pump(
         tester,
         const SyntaxText(everyKind, padding: EdgeInsets.all(40)),
@@ -439,17 +482,22 @@ void main() {
       expect(padding.map((p) => p.padding), contains(const EdgeInsets.all(40)));
     });
 
-    testWidgets('툴팁 문구', (tester) async {
-      // 패키지가 사용자에게 보이는 문자열을 박아 넣으면 앱의 언어를 못 따른다.
-      await pump(tester, const SyntaxText(everyKind, copyTooltip: '복사'));
-      expect(tester.widget<IconButton>(find.byType(IconButton)).tooltip, '복사');
+    testWidgets('tooltip text', (tester) async {
+      // If the package hard-codes user-visible strings, they cannot follow the
+      // app's language.
+      await pump(tester, const SyntaxText(everyKind, copyTooltip: 'Copy code'));
+      expect(
+        tester.widget<IconButton>(find.byType(IconButton)).tooltip,
+        'Copy code',
+      );
     });
   });
 
-  group('스크롤이 실제로 움직인다', () {
-    // **자식의 중심이 아니라 뷰포트 중심에서 끈다.** 긴 소스의 `SelectableText`는
-    // 뷰포트보다 크므로 그 중심은 화면 밖이고, 거기서 끄는 제스처는 허공에
-    // 떨어져 아무것도 움직이지 않는다 — 스크롤이 고장 난 것처럼 보인다.
+  group('scrolling actually moves', () {
+    // **Drags from the viewport's centre, not the child's.** A long source's
+    // `SelectableText` is bigger than the viewport, so its centre is off
+    // screen, and a gesture dragged from there lands in thin air and moves
+    // nothing — scrolling looks broken.
     final long = List.generate(
       80,
       (i) =>
@@ -467,12 +515,12 @@ void main() {
     ScrollController horizontalOf(WidgetTester tester) =>
         scrollOf(tester, Axis.horizontal);
 
-    /// [controller]를 그리는 바.
+    /// The bar that draws [controller].
     Finder barOf(ScrollController controller) => find.byWidgetPredicate(
       (w) => w is Scrollbar && w.controller == controller,
     );
 
-    testWidgets('세로는 끌어서 넘어간다', (tester) async {
+    testWidgets('vertical scrolls by dragging', (tester) async {
       await pump(tester, SyntaxText(long));
       final vertical = tester.widget<SingleChildScrollView>(
         find.byWidgetPredicate(
@@ -490,13 +538,16 @@ void main() {
       expect(vertical.controller!.position.pixels, greaterThan(0));
     });
 
-    testWidgets('가로는 끌어서 넘어가지 않는다 — 선택 가능한 것의 대가', (tester) async {
-      // 고장이 아니라 성질이다. 선택 제스처가 가로 드래그를 가져가고,
-      // `SelectionArea`로 바꿔도 같다(2026-09-06 측정). 선택을 포기하지 않는 한
-      // 고칠 수 없으므로, 가로 `Scrollbar`가 터치에서 유일한 어포던스다.
+    testWidgets('horizontal does not scroll by dragging — the price of being '
+        'selectable', (tester) async {
+      // Not a fault but a property. The selection gesture takes the
+      // horizontal drag, and switching to `SelectionArea` is the same
+      // (measured 2026-09-06). It cannot be fixed without giving up
+      // selection, so the horizontal `Scrollbar` is the only affordance on
+      // touch.
       //
-      // 이 검사가 있는 이유는 그 사실이 잊히면 누군가 스크롤바를 "장식"이라며
-      // 걷어내기 때문이다.
+      // This check exists because once that fact is forgotten, someone strips
+      // the scrollbar out as "decoration".
       await pump(tester, SyntaxText(long));
       final horizontal = tester.widget<SingleChildScrollView>(
         find.byWidgetPredicate(
@@ -508,7 +559,7 @@ void main() {
       expect(
         horizontal.controller!.position.maxScrollExtent,
         greaterThan(0),
-        reason: '줄이 접혔다 — 접힌 줄은 다른 줄이다',
+        reason: 'lines were wrapped — a wrapped line is a different line',
       );
 
       await tester.dragFrom(
@@ -518,19 +569,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(horizontal.controller!.position.pixels, 0);
 
-      // 그 스크롤바가 있는 것만으로는 부족하다 — Android에서는 있어도 끌리지
-      // 않았다(#29). 끌리는지는 아래 그룹이 잰다.
+      // That scrollbar merely being there is not enough — on Android it was
+      // there but could not be dragged (#29). The group below measures
+      // whether it drags.
     });
 
-    group('가로 스크롤바는 터치에서 끌린다', () {
-      // 위의 검사가 말하는 "유일한 어포던스"가 실제로 쓸 수 있는 것인지를 잰다.
-      // Material `Scrollbar`는 Android에서만 `interactive`의 기본값이 false이고,
-      // thumb은 스크롤할 때만 나타나며 투명하면 히트를 받지 않는다. 가로를
-      // 스크롤할 길이 그 thumb뿐이라 기본값 그대로는 처음 보이게 할 수 없다.
-      // (#29, ADR-0004)
+    group('the horizontal scrollbar drags on touch', () {
+      // Measures whether the "only affordance" the check above speaks of is
+      // actually usable. Material `Scrollbar` defaults `interactive` to false
+      // on Android only, and the thumb appears only while scrolling and takes
+      // no hits while transparent. The thumb is the only way to scroll
+      // horizontally, so with the defaults as they are it can never be made
+      // to appear in the first place. (#29, ADR-0004)
 
-      /// 위젯 영역의 바닥, 왼쪽 끝 근처 — 가로 thumb이 그려져야 하는 자리다.
-      /// 세로를 움직이지 않는다. 바가 내용 끝에 그려지면 여기에는 없다.
+      /// The bottom of the widget area, near the left edge — where the
+      /// horizontal thumb must be drawn. Does not move vertically. If the bar
+      /// is drawn at the end of the content, it is not here.
       Future<void> dragThumb(WidgetTester tester) async {
         final box = tester.getRect(find.byType(SyntaxText));
         await tester.dragFrom(
@@ -542,8 +596,8 @@ void main() {
 
       for (final scrollable in [false, true]) {
         for (final (name, palette) in [
-          ('파생 기본', null),
-          ('배경 있는 프리셋', SyntaxPalette.oneDark),
+          ('derived default', null),
+          ('preset with background', SyntaxPalette.oneDark),
         ]) {
           testWidgets('android, scrollable: $scrollable, $name', (
             tester,
@@ -558,9 +612,11 @@ void main() {
         }
       }
 
-      testWidgets('배경 있는 프리셋이 앱의 스크롤바 테마를 지우지 않는다', (tester) async {
-        // 색만 팔레트가 정한다. 나머지 필드는 앱의 것이 그대로 읽혀야 한다 —
-        // 통째로 갈아 끼우면 소비자가 바를 켜는 길이 프리셋에서만 막힌다.
+      testWidgets('a preset with a background does not wipe the app\'s '
+          'scrollbar theme', (tester) async {
+        // Only the colour is set by the palette. The remaining fields must read
+        // as the app's — swapping the whole thing out would block the
+        // consumer's way of turning bars on, for presets only.
         const appThumb = Color(0xFFFF0000);
         await tester.pumpWidget(
           MaterialApp(
@@ -590,13 +646,18 @@ void main() {
         expect(
           thumb?.withAlpha(255),
           SyntaxPalette.oneDark.comment!.color!.withAlpha(255),
-          reason: 'thumb 색은 프리셋의 배경 위에서 고른 팔레트 색이어야 한다',
+          reason:
+              'the thumb colour must be a palette colour picked on the '
+              'preset\'s background',
         );
       });
 
-      testWidgets('android에서 바 자리를 탭하면 한 페이지 넘어간다', (tester) async {
-        // `interactive`를 켜면 Flutter의 track 탭도 같이 켜진다. 따로 끌 수 없어
-        // 대가로 받아들였다(ADR-0004). 이 띠의 터치는 텍스트에 닿지 않는다.
+      testWidgets('on android, tapping where the bar is pages over', (
+        tester,
+      ) async {
+        // Turning `interactive` on turns Flutter's track tap on with it. It
+        // cannot be turned off separately, so it was accepted as the price
+        // (ADR-0004). Touches in this band do not reach the text.
         await pump(tester, SyntaxText(long));
         final box = tester.getRect(find.byType(SyntaxText));
         await tester.tapAt(Offset(box.center.dx + 100, box.bottom - 2));
@@ -604,28 +665,35 @@ void main() {
         expect(horizontalOf(tester).position.pixels, greaterThan(0));
       });
 
-      testWidgets('바가 맨 바깥에 늘 떠 있어도 길게 누르면 선택된다', (tester) async {
-        await pump(tester, SyntaxText(long));
-        await tester.longPressAt(tester.getCenter(find.byType(SyntaxText)));
-        await tester.pumpAndSettle();
-        final selection = tester
-            .state<EditableTextState>(find.byType(EditableText))
-            .textEditingValue
-            .selection;
-        expect(selection.isCollapsed, isFalse);
-      });
+      testWidgets(
+        'a long press selects even with the bar always shown outermost',
+        (tester) async {
+          await pump(tester, SyntaxText(long));
+          await tester.longPressAt(tester.getCenter(find.byType(SyntaxText)));
+          await tester.pumpAndSettle();
+          final selection = tester
+              .state<EditableTextState>(find.byType(EditableText))
+              .textEditingValue
+              .selection;
+          expect(selection.isCollapsed, isFalse);
+        },
+      );
 
-      testWidgets('scrollable: true여도 가로 바는 위젯 영역 바닥에 있다', (tester) async {
+      testWidgets('even with scrollable: true the horizontal bar is at the '
+          'bottom of the widget area', (tester) async {
         await pump(tester, SyntaxText(long));
         expect(
           tester.getRect(barOf(horizontalOf(tester))).bottom,
           lessThanOrEqualTo(tester.getRect(find.byType(SyntaxText)).bottom),
-          reason: '가로 바가 내용 끝에 그려진다 — 세로를 끝까지 내려야 보인다',
+          reason:
+              'the horizontal bar is drawn at the end of the content — it '
+              'shows only after scrolling all the way down',
         );
       });
 
-      /// [controller]의 바가 늘 보이는지. Material `Scrollbar`가 푸는 순서 그대로
-      /// — 위젯 파라미터, 그다음 가장 가까운 테마, 없으면 false.
+      /// Whether [controller]'s bar is always shown. In exactly the order
+      /// Material `Scrollbar` resolves it — the widget parameter, then the
+      /// nearest theme, otherwise false.
       bool alwaysShown(WidgetTester tester, ScrollController controller) {
         final finder = barOf(controller);
         return tester.widget<Scrollbar>(finder).thumbVisibility ??
@@ -635,9 +703,12 @@ void main() {
             false;
       }
 
-      testWidgets('앱이 thumbVisibility: false를 주면 그것이 이긴다', (tester) async {
-        // 위젯은 아무도 정하지 않은 값만 채운다. 앱이 끄면 터치에서 가로로 넘길
-        // 길이 사라지지만, 그것은 앱이 고른 것이다.
+      testWidgets('if the app gives thumbVisibility: false, that wins', (
+        tester,
+      ) async {
+        // The widget fills in only values nobody set. If the app turns it off,
+        // the way to scroll horizontally on touch is gone, but that is the
+        // app's choice.
         await tester.pumpWidget(
           MaterialApp(
             theme: ThemeData(
@@ -660,7 +731,7 @@ void main() {
         expect(horizontalOf(tester).position.pixels, 0);
       });
 
-      testWidgets('android가 아니면 채우지 않는다', (tester) async {
+      testWidgets('does not fill in off android', (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         try {
           await pump(tester, SyntaxText(long));
@@ -672,9 +743,12 @@ void main() {
         }
       });
 
-      testWidgets('세로 바는 android에서도 그대로다', (tester) async {
-        // 기본값은 가로 바에만 채운다. 세로는 끌어서 넘어가므로 바가 늘 보일
-        // 이유가 없다.
+      testWidgets('the vertical bar is untouched on android too', (
+        tester,
+      ) async {
+        // The defaults are filled in for the horizontal bar only. Vertical
+        // scrolls by dragging, so there is no reason for its bar to be always
+        // shown.
         await pump(tester, SyntaxText(long));
         final vertical = tester
             .widget<SingleChildScrollView>(
@@ -690,11 +764,13 @@ void main() {
       });
     });
 
-    group('스크롤바는 화면 inset이 아니라 위젯 영역을 따른다', () {
-      // Material `Scrollbar`는 painter에 `MediaQuery.paddingOf`를 그대로 넣는다.
-      // 그 값은 **화면**의 inset인데 바는 위젯 영역 안에 그려지므로, 위젯이 화면
-      // 중간에 있어도 바가 그만큼 안으로 밀려 마지막 줄에 겹쳤다(#31). 위젯
-      // 테스트의 기본 padding은 0이라, 여기서는 직접 준다.
+    group('scrollbars follow the widget area, not the screen inset', () {
+      // Material `Scrollbar` passes `MediaQuery.paddingOf` straight into the
+      // painter. That value is the **screen's** inset, but the bar is drawn
+      // inside the widget area, so even with the widget in the middle of the
+      // screen the bar was pushed in by that much and overlapped the last
+      // line (#31). The default padding in widget tests is 0, so it is given
+      // here explicitly.
       const inset = EdgeInsets.all(24);
 
       Future<void> pumpInset(
@@ -724,9 +800,10 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      /// [controller]의 바가 화면 좌표 [at]에서 자기 track에 닿는지. 그려진
-      /// track 그 자체를 묻는다 — 터치 hit 영역은 thumb 둘레로 반경 24까지
-      /// 넓어져서, 드래그로는 24만큼 밀린 바도 맞는다.
+      /// Whether [controller]'s bar hits its own track at screen position
+      /// [at]. Asks about the painted track itself — the touch hit area widens
+      /// to a radius of 24 around the thumb, so by dragging, a bar pushed in
+      /// by 24 also hits.
       bool covers(WidgetTester tester, ScrollController controller, Offset at) {
         final finder = find
             .descendant(
@@ -744,35 +821,40 @@ void main() {
       }
 
       for (final scrollable in [false, true]) {
-        testWidgets('가로 바는 위젯 바닥에, 양 끝까지 — scrollable: $scrollable', (
-          tester,
-        ) async {
-          await pumpInset(tester, SyntaxText(long, scrollable: scrollable));
-          final box = tester.getRect(find.byType(SyntaxText));
-          final bar = horizontalOf(tester);
-          expect(
-            covers(tester, bar, box.bottomCenter - const Offset(0, 1)),
-            isTrue,
-          );
-          expect(
-            covers(tester, bar, box.bottomCenter - const Offset(0, 26)),
-            isFalse,
-            reason: '바가 bottom inset만큼 올라가 마지막 줄 위에 있다',
-          );
-          expect(
-            covers(tester, bar, box.bottomLeft + const Offset(1, -1)),
-            isTrue,
-          );
-          expect(
-            covers(tester, bar, box.bottomRight - const Offset(1, 1)),
-            isTrue,
-          );
-        });
+        testWidgets(
+          'the horizontal bar is at the widget bottom, edge to edge — '
+          'scrollable: $scrollable',
+          (tester) async {
+            await pumpInset(tester, SyntaxText(long, scrollable: scrollable));
+            final box = tester.getRect(find.byType(SyntaxText));
+            final bar = horizontalOf(tester);
+            expect(
+              covers(tester, bar, box.bottomCenter - const Offset(0, 1)),
+              isTrue,
+            );
+            expect(
+              covers(tester, bar, box.bottomCenter - const Offset(0, 26)),
+              isFalse,
+              reason:
+                  'the bar is raised by the bottom inset, over the last line',
+            );
+            expect(
+              covers(tester, bar, box.bottomLeft + const Offset(1, -1)),
+              isTrue,
+            );
+            expect(
+              covers(tester, bar, box.bottomRight - const Offset(1, 1)),
+              isTrue,
+            );
+          },
+        );
       }
 
-      testWidgets('세로 바는 위젯 오른쪽 끝에, 위아래 끝까지', (tester) async {
-        // android에서 세로 바는 스크롤할 때만 보이고 `interactive`도 꺼져 있어,
-        // 그대로는 track이 히트를 받지 않는다. 앱 테마로 둘 다 켜서 잰다.
+      testWidgets('the vertical bar is at the widget\'s right edge, top to '
+          'bottom', (tester) async {
+        // On android the vertical bar shows only while scrolling and
+        // `interactive` is off too, so as is the track takes no hits. Both are
+        // turned on through the app theme to measure it.
         await pumpInset(
           tester,
           SyntaxText(long),
@@ -791,13 +873,15 @@ void main() {
         expect(
           covers(tester, bar, box.centerRight - const Offset(26, 0)),
           isFalse,
-          reason: '바가 right inset만큼 안으로 들어와 있다',
+          reason: 'the bar is pushed in by the right inset',
         );
       });
 
-      testWidgets('안의 코드는 여전히 화면 inset을 본다', (tester) async {
-        // 선택 툴바와 핸들은 화면 안에 머물려고 이 값을 읽는다. 지운 것은 바의
-        // 몫뿐이어야 한다.
+      testWidgets('the code inside still sees the screen inset', (
+        tester,
+      ) async {
+        // The selection toolbar and handles read this value to stay on screen.
+        // What was removed must be the bars' share only.
         await pumpInset(tester, SyntaxText(long));
         expect(
           MediaQuery.paddingOf(tester.element(find.byType(EditableText))),
@@ -805,11 +889,14 @@ void main() {
         );
       });
 
-      testWidgets('키보드가 오르내려도 코드를 다시 짓지 않는다', (tester) async {
-        // inset을 지우려고 `MediaQuery`를 읽는 자리가 이 위젯의 build로 올라가면,
-        // 키보드 애니메이션의 매 프레임 모든 스팬을 다시 만든다. 다시 지었다면
-        // `SelectableText`가 새 인스턴스다. 위젯은 두 번 다 같은 인스턴스를
-        // 넘긴다 — 새로 만들면 그것만으로 다시 짓는다.
+      testWidgets('the code is not rebuilt as the keyboard rises and falls', (
+        tester,
+      ) async {
+        // If the place that reads `MediaQuery` to remove the inset moves up
+        // into this widget's build, every span is remade on every frame of the
+        // keyboard animation. If it was rebuilt, `SelectableText` is a new
+        // instance. The widget passed is the same instance both times —
+        // making a new one would rebuild by that alone.
         final code = SyntaxText(long);
         Widget app(double keyboard) => MaterialApp(
           home: Builder(
@@ -834,12 +921,15 @@ void main() {
       });
     });
 
-    group('데스크톱에서 세로 바는 하나다', () {
-      // Material의 `MaterialScrollBehavior.buildScrollbar`는 데스크톱에서 세로
-      // `Scrollable`마다 바를 하나 더 붙인다. 이 위젯이 이미 단 바와 같은
-      // 컨트롤러를 그려 thumb이 두 번 칠해졌다(#32).
+    group('on desktop there is one vertical bar', () {
+      // Material's `MaterialScrollBehavior.buildScrollbar` attaches one more
+      // bar to every vertical `Scrollable` on desktop. It drew the same
+      // controller as the bar this widget already has, so the thumb was
+      // painted twice (#32).
 
-      testWidgets('세로 뷰에는 이 위젯의 바만 붙는다', (tester) async {
+      testWidgets('only this widget\'s bar is attached to the vertical view', (
+        tester,
+      ) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         try {
           await pump(tester, SyntaxText(long));
@@ -849,10 +939,13 @@ void main() {
         }
       });
 
-      testWidgets('EditableText 안쪽의 자동 바는 그대로 둔다', (tester) async {
-        // `scrollable: false`를 높이가 정해진 자리에 넣으면 `EditableText`가
-        // 자기 안에서 세로로 스크롤한다. 그때 데스크톱에서 보이는 세로 바는 이
-        // 자동 바 하나뿐이라 지우지 않는다(#32에서 메인테이너가 정함).
+      testWidgets('the automatic bar inside EditableText is left alone', (
+        tester,
+      ) async {
+        // Put `scrollable: false` in a place with a fixed height and
+        // `EditableText` scrolls vertically inside itself. Then the only
+        // vertical bar visible on desktop is this automatic one, so it is not
+        // removed (decided by the maintainer in #32).
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         try {
           await pump(tester, SyntaxText(long, scrollable: false));
@@ -878,9 +971,11 @@ void main() {
         }
       });
 
-      testWidgets('앱의 ScrollBehavior는 세로 뷰에도 그대로 걸린다', (tester) async {
-        // 바만 끄고 나머지는 앱의 것을 물려받는다. 새 `ScrollBehavior`를 끼우면
-        // 앱이 정한 `dragDevices`가 사라져 터치가 다시 스크롤한다.
+      testWidgets('the app\'s ScrollBehavior still applies to the vertical '
+          'view', (tester) async {
+        // Only the bar is turned off; the rest is inherited from the app.
+        // Slotting in a new `ScrollBehavior` would lose the app's
+        // `dragDevices`, and touch would scroll again.
         await tester.pumpWidget(
           MaterialApp(
             scrollBehavior: const MaterialScrollBehavior().copyWith(
@@ -904,7 +999,7 @@ void main() {
       });
     });
 
-    group('마우스 휠은 미끄러진다', () {
+    group('the mouse wheel glides', () {
       const frame = Duration(milliseconds: 16);
 
       ScrollPosition along(WidgetTester tester, Axis axis) => tester
@@ -916,14 +1011,16 @@ void main() {
           .controller!
           .position;
 
-      /// [at]에서 마우스 휠 한 notch를 보낸다. pump하지 않는다.
+      /// Sends one mouse-wheel notch at [at]. Does not pump.
       Future<void> wheel(WidgetTester tester, Offset at, double dy) async {
         final pointer = TestPointer(1, PointerDeviceKind.mouse);
         await tester.sendEventToBinding(pointer.hover(at));
         await tester.sendEventToBinding(pointer.scroll(Offset(0, dy)));
       }
 
-      testWidgets('한 notch가 순간이동하지 않고 목표까지 간다', (tester) async {
+      testWidgets('one notch travels to the target without teleporting', (
+        tester,
+      ) async {
         await pump(tester, SyntaxText(long));
         await wheel(tester, tester.getCenter(find.byType(SyntaxText)), 120);
         await tester.pump();
@@ -936,9 +1033,12 @@ void main() {
         expect(along(tester, Axis.vertical).pixels, 120);
       });
 
-      testWidgets('끝 근처의 notch는 끝에서 정확히 멈춘다', (tester) async {
-        // macOS는 `BouncingScrollPhysics`라 끝을 넘는 위치를 허용한다. 거기서
-        // 멈추게 하는 것은 휠 motion 자신의 clamp뿐이다.
+      testWidgets('a notch near the end stops exactly at the end', (
+        tester,
+      ) async {
+        // macOS uses `BouncingScrollPhysics`, which allows positions past the
+        // end. The only thing that stops it there is the wheel motion's own
+        // clamp.
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
         try {
           await pump(tester, SyntaxText(long));
@@ -950,7 +1050,11 @@ void main() {
           await wheel(tester, tester.getCenter(find.byType(SyntaxText)), 120);
           await tester.pump();
           await tester.pump(frame);
-          expect(position.pixels, lessThan(max), reason: '애니메이션 없이 점프했다');
+          expect(
+            position.pixels,
+            lessThan(max),
+            reason: 'jumped without animating',
+          );
           while (tester.binding.hasScheduledFrame) {
             await tester.pump(frame);
             expect(position.pixels, lessThanOrEqualTo(max));
@@ -961,12 +1065,15 @@ void main() {
         }
       });
 
-      testWidgets('스크롤바 위에서 굴려도 미끄러진다', (tester) async {
-        // 휠은 먼저 등록한 쪽이 가져가고, 뷰가 스크롤바보다 안쪽이라 먼저
-        // 등록한다. 스크롤바가 휠을 받는 것은 그 painter가 히트를 가로챌 때 —
-        // 데스크톱에서 그 위에 hover해 track이 드러났을 때 — 뿐이다. 그래서
-        // 데스크톱으로 두고, 뷰가 히트 경로에서 빠졌는지부터 확인한다. 아니면
-        // 이 검사는 위의 것을 다시 재는 것이 된다.
+      testWidgets('it glides when rolled over the scrollbar too', (
+        tester,
+      ) async {
+        // Whoever registers first takes the wheel, and the view is inside the
+        // scrollbar, so it registers first. The scrollbar gets the wheel only
+        // when its painter intercepts the hit — when hovering over it on
+        // desktop has revealed the track. So this runs as desktop and first
+        // checks that the view has dropped out of the hit path. Otherwise this
+        // check measures the one above again.
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         try {
           await pump(tester, SyntaxText(long));
@@ -988,7 +1095,8 @@ void main() {
                 .path
                 .any((entry) => identical(entry.target, view)),
             isFalse,
-            reason: '뷰가 휠을 받는다 — 스크롤바 경로를 재지 못한다',
+            reason:
+                'the view gets the wheel — the scrollbar path is not measured',
           );
 
           await wheel(tester, bar, 120);
@@ -1005,11 +1113,11 @@ void main() {
         }
       });
 
-      testWidgets('Shift+휠은 가로로 미끄러진다', (tester) async {
+      testWidgets('Shift+wheel glides horizontally', (tester) async {
         await pump(tester, SyntaxText(long));
         final horizontal = along(tester, Axis.horizontal);
         final target = math.min(60.0, horizontal.maxScrollExtent);
-        expect(target, greaterThan(16), reason: '가로로 움직일 여지가 없다');
+        expect(target, greaterThan(16), reason: 'no room to move horizontally');
 
         await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
         try {
@@ -1033,14 +1141,15 @@ void main() {
       });
 
       group('wheelMotion', () {
-        /// 인자를 생략한 것. `null`을 넘긴 것과 구별한다.
+        /// The argument omitted. Distinguished from passing `null`.
         const omitted = Object();
 
         Widget view(Object? motion) => identical(motion, omitted)
             ? SyntaxText(long)
             : SyntaxText(long, wheelMotion: motion as WheelMotion?);
 
-        /// 새 트리에서 세로 한 notch를 보내고, 첫 프레임 뒤의 위치를 돌려준다.
+        /// Sends one vertical notch on a fresh tree and returns the position
+        /// after the first frame.
         Future<double> firstStep(WidgetTester tester, Object? motion) async {
           await pump(tester, const SizedBox());
           await pump(tester, view(motion));
@@ -1050,7 +1159,9 @@ void main() {
           return along(tester, Axis.vertical).pixels;
         }
 
-        testWidgets('null이면 세로도 가로도 즉시 간다', (tester) async {
+        testWidgets('with null, both vertical and horizontal go instantly', (
+          tester,
+        ) async {
           await pump(tester, view(null));
           final center = tester.getCenter(find.byType(SyntaxText));
           await wheel(tester, center, 120);
@@ -1073,7 +1184,8 @@ void main() {
           ('curve', const WheelMotion.curve(curve: Curves.easeOut)),
           ('lerp', const WheelMotion.lerp()),
         ]) {
-          testWidgets('$name 모션은 미끄러지되 기본 spring과 다르게 간다', (tester) async {
+          testWidgets('$name motion glides but travels differently from the '
+              'default spring', (tester) async {
             final spring = await firstStep(tester, omitted);
             final step = await firstStep(tester, motion);
             expect(step, greaterThan(0));
@@ -1085,25 +1197,30 @@ void main() {
           });
         }
 
-        testWidgets('바꾸면 위치는 그대로고 다음 notch부터 적용된다', (tester) async {
-          await pump(tester, view(omitted));
-          final center = tester.getCenter(find.byType(SyntaxText));
-          await wheel(tester, center, 120);
-          await tester.pumpAndSettle();
-          expect(along(tester, Axis.vertical).pixels, 120);
+        testWidgets(
+          'changing it keeps the position and applies from the next notch',
+          (tester) async {
+            await pump(tester, view(omitted));
+            final center = tester.getCenter(find.byType(SyntaxText));
+            await wheel(tester, center, 120);
+            await tester.pumpAndSettle();
+            expect(along(tester, Axis.vertical).pixels, 120);
 
-          await pump(tester, view(null));
-          expect(along(tester, Axis.vertical).pixels, 120);
+            await pump(tester, view(null));
+            expect(along(tester, Axis.vertical).pixels, 120);
 
-          await wheel(tester, center, 120);
-          await tester.pump();
-          expect(along(tester, Axis.vertical).pixels, 240);
-        });
+            await wheel(tester, center, 120);
+            await tester.pump();
+            expect(along(tester, Axis.vertical).pixels, 240);
+          },
+        );
       });
 
-      testWidgets('scrollable: false인 블록 위의 세로 휠은 바깥 뷰가 받는다', (tester) async {
-        // 글 안에 박힌 코드 블록. 그 위에서 세로로 굴리면 글이 넘어가야 한다 —
-        // 블록이 소유한 가로 뷰가 세로 휠을 가져가면 페이지가 거기서 멈춘다.
+      testWidgets('the outer view gets a vertical wheel over a scrollable: '
+          'false block', (tester) async {
+        // A code block embedded in prose. Rolling vertically over it must
+        // scroll the prose — if the horizontal view the block owns takes the
+        // vertical wheel, the page stops there.
         final outer = ScrollController();
         addTearDown(outer.dispose);
         await pump(
@@ -1125,7 +1242,7 @@ void main() {
       });
     });
 
-    testWidgets('컨트롤러는 트리와 함께 정리된다', (tester) async {
+    testWidgets('controllers are disposed with the tree', (tester) async {
       await pump(tester, SyntaxText(long));
       final controller = tester
           .widget<SingleChildScrollView>(
@@ -1141,9 +1258,9 @@ void main() {
     });
   });
 
-  group('복사 컨트롤', () {
-    testWidgets('오른쪽 위에 놓인다', (tester) async {
-      // 왼쪽에 두면 코드의 첫 글자들을 가린다.
+  group('copy control', () {
+    testWidgets('sits at the top right', (tester) async {
+      // On the left it would cover the first characters of the code.
       await pump(tester, const SyntaxText(everyKind));
       final widget = tester.getRect(find.byType(SyntaxText));
       final button = tester.getCenter(find.byType(IconButton));
@@ -1151,13 +1268,13 @@ void main() {
       expect(button.dy, lessThan(widget.center.dy));
     });
 
-    testWidgets('copyable: false면 없다', (tester) async {
+    testWidgets('absent with copyable: false', (tester) async {
       await pump(tester, const SyntaxText(everyKind, copyable: false));
       expect(find.byType(IconButton), findsNothing);
     });
 
-    testWidgets('확인 표시는 유한하다', (tester) async {
-      // 불확정 인디케이터에서는 `pumpAndSettle`이 영원히 정착하지 않는다.
+    testWidgets('the confirmation mark is finite', (tester) async {
+      // With an indeterminate indicator, `pumpAndSettle` never settles.
       await pump(tester, const SyntaxText(everyKind));
       await tester.tap(find.byType(IconButton));
       await tester.pump();
@@ -1166,9 +1283,12 @@ void main() {
       expect(find.byIcon(Icons.check), findsNothing);
     });
 
-    testWidgets('source가 바뀌면 확인 표시가 리셋된다', (tester) async {
-      // 확인 표시는 그것이 보여진 소스의 것이다. 리셋하지 않으면 A를 복사하고
-      // 잠깐 뒤 B로 바꿨을 때 복사된 적 없는 것 옆에 초록 체크가 남는다.
+    testWidgets('the confirmation mark resets when source changes', (
+      tester,
+    ) async {
+      // The confirmation mark belongs to the source it was shown for. Without
+      // a reset, copying A and switching to B shortly after leaves a green
+      // check next to something that was never copied.
       await pump(tester, const SyntaxText(everyKind));
       await tester.tap(find.byType(IconButton));
       await tester.pump();
@@ -1179,14 +1299,16 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 3));
     });
 
-    testWidgets('트리가 사라져도 타이머가 남지 않는다', (tester) async {
-      // 트리보다 오래 사는 타이머는 그것을 pump한 테스트를 실패시키며, 그것이
-      // 옳은 동작이라 선택 사항이 아니다.
+    testWidgets('no timer is left behind when the tree goes away', (
+      tester,
+    ) async {
+      // A timer that outlives the tree fails the test that pumped it, and
+      // since that is the right behaviour, it is not optional.
       await pump(tester, const SyntaxText(everyKind));
       await tester.tap(find.byType(IconButton));
       await tester.pump();
       await pump(tester, const SizedBox());
-      // 여기서 타이머가 살아 있으면 이 테스트가 실패한다.
+      // If a timer is still alive here, this test fails.
     });
   });
 }

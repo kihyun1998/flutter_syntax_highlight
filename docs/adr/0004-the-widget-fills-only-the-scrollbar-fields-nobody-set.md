@@ -1,59 +1,59 @@
-# 위젯은 아무도 정하지 않은 스크롤바 필드만 채우고, 색은 팔레트가 정한다
+# The widget fills only the scrollbar fields nobody set, and the palette decides the colour
 
-`SyntaxText`가 자기 스크롤바에 끼우는 `ScrollbarTheme`은 바깥의 `ScrollbarTheme.of(context)`를 **갈아 끼우지 않고 그 위에 얹는다.** 필드마다 주인이 다르다:
+The `ScrollbarTheme` that `SyntaxText` puts around its own scrollbars **does not replace the outer `ScrollbarTheme.of(context)` but sits on top of it.** Each field has a different owner:
 
-- **`thumbColor`는 팔레트가 정한다** (배경이 있을 때). [ADR-0002](0002-a-palette-carries-its-own-background.md)의 규칙 그대로 — 색을 고른 사람이 그 색이 놓일 자리도 정한다. 앱이 준 색은 앱의 surface에 대고 고른 것이라 프리셋의 배경 위에서는 아무것도 보장하지 않는다.
-- **동작과 모양(`interactive`, `thumbVisibility`, `thickness`, `radius`…)은 소비자가 정한다.** 배경과 무관한 값이다.
-- **아무도 정하지 않은 값은 위젯이 채운다.** `TargetPlatform.android`에서 앱 테마의 `interactive`와 `thumbVisibility`가 비어 있으면, **가로** `Scrollbar`의 위젯 파라미터로 `true`를 넘긴다. 테마로 채우지 않는 것은, 테마가 그 아래의 세로 바에도 걸려 세로 바까지 늘 보이게 되기 때문이다.
+- **The palette decides `thumbColor`** (when there is a background). It is [ADR-0002](0002-a-palette-carries-its-own-background.md)'s rule as is — whoever picks a colour also decides where it sits. A colour the app gave was picked against the app's surface, so on a preset's background it guarantees nothing.
+- **The consumer decides behaviour and shape (`interactive`, `thumbVisibility`, `thickness`, `radius`…).** They are values unrelated to the background.
+- **The widget fills the values nobody set.** On `TargetPlatform.android`, if the app theme's `interactive` and `thumbVisibility` are empty, it passes `true` as widget parameters of the **horizontal** `Scrollbar`. It does not fill them through the theme because the theme would also apply to the vertical bar beneath it, and the vertical bar would end up always visible too.
 
-규칙은 하나다: **그 값을 무엇을 보고 골랐는지가 그 값의 주인을 정한다.**
+There is one rule: **what a value was picked against decides who owns it.**
 
-[#29](https://github.com/kihyun1998/flutter_syntax_highlight/issues/29)의 grilling에서 정했다 (2026-10-19).
+Decided in the grilling on [#29](https://github.com/kihyun1998/flutter_syntax_highlight/issues/29) (2026-10-19).
 
 ## Context
 
-클래스 doc은 가로 `Scrollbar`를 **"터치에서 유일한 가로 어포던스"**라고 적는다. 선택 제스처가 텍스트 위 가로 드래그를 가져가기 때문이다(2026-09-06 측정). 그런데 Android에서 그 바는 끌리지 않았다. 2026-10-19 측정:
+The class doc calls the horizontal `Scrollbar` **"the only horizontal affordance on touch"**, because the selection gesture takes a horizontal drag over the text (measured 2026-09-06). But on Android that bar could not be dragged. Measured 2026-10-19:
 
-| | 끈 뒤 가로 위치 |
+| | Horizontal position after dragging |
 |---|---|
 | widget test, android, `scrollable` true / false | **0.0** / 0.0 |
-| widget test, windows (대조군) | 302.3 |
-| 에뮬레이터(Medium Phone API 36.1), 기본 | **0.0** |
-| 에뮬레이터, 앱 테마로 `interactive`·`thumbVisibility`를 켬 | 127.4 / 127 (끝까지) |
+| widget test, windows (control) | 302.3 |
+| emulator (Medium Phone API 36.1), default | **0.0** |
+| emulator, `interactive`·`thumbVisibility` turned on in the app theme | 127.4 / 127 (all the way) |
 
-원인은 두 겹이다. Material `Scrollbar`는 Android에서만 `interactive`의 기본값이 false이고, thumb은 스크롤할 때만 나타나며 투명하면 hit test에도 걸리지 않는다. 가로를 스크롤할 길이 그 thumb뿐이므로, 처음 보이게 만들 방법이 없다.
+The cause has two layers. Only on Android does Material `Scrollbar` default `interactive` to false, and the thumb appears only while scrolling, and while transparent it does not take hit tests either. Since that thumb is the only way to scroll horizontally, there is no way to make it visible in the first place.
 
-**그리고 소비자가 직접 켜는 길도 막혀 있었다.** 위젯은 배경이 있을 때 thumb 색을 맞추려고 `ScrollbarTheme(data: ScrollbarThemeData(thumbColor: …))`를 끼웠다. 테마는 합쳐지지 않고 가장 가까운 것 하나만 읽힌다. 그래서 색 하나를 바꾸려던 테마가 그 위에서 앱이 정한 나머지 필드를 전부 지웠다:
+**And the path for the consumer to turn it on themselves was blocked too.** To match the thumb colour when there is a background, the widget put in `ScrollbarTheme(data: ScrollbarThemeData(thumbColor: …))`. Themes do not merge; only the nearest one is read. So a theme meant to change one colour wiped out, on top of it, every other field the app had set:
 
-| 앱 테마로 바를 켰을 때 (android, widget test) | |
+| With the bar turned on in the app theme (android, widget test) | |
 |---|---|
-| 파생 기본 (배경 없음 → 위젯이 테마를 끼우지 않음) | 302.3 |
-| `SyntaxPalette.oneDark` (배경 있음) | **0.0** |
+| derived default (no background → widget puts in no theme) | 302.3 |
+| `SyntaxPalette.oneDark` (has background) | **0.0** |
 
-## 고려한 것
+## Considered
 
-- **위젯이 강제한다.** Android에서 늘 켠다. 소비자는 끌 수 없다 — 바가 늘 보이는 것을 원치 않는 앱에서 패키지가 화면 모양을 일방적으로 정한다.
-- **소비자에게 맡긴다.** 합치기만 고친다. 기본 상태의 Android 사용자는 여전히 가로로 넘길 수 없고, doc의 "유일한 어포던스"는 거짓으로 남는다.
-- **빈 필드만 채운다 (채택).** 처음 쓰는 사람에게 바로 동작하고, 덮을 길도 남는다. Flutter 테마가 원래 해석되는 순서(위젯 파라미터 → 가까운 테마 → 플랫폼 기본값)에 끼어들 뿐 그것을 뒤집지 않는다.
+- **The widget forces it.** Always on, on Android. The consumer cannot turn it off — in an app that does not want an always-visible bar, the package decides the look of the screen unilaterally.
+- **Leave it to the consumer.** Only fix the merging. A default-state Android user still cannot scroll horizontally, and the doc's "only affordance" stays false.
+- **Fill only the empty fields (adopted).** It works straight away for a first-time user, and leaves a way to override it. It only slots into the order Flutter themes are already resolved in (widget parameter → nearest theme → platform default), and does not overturn it.
 
 ## Consequences
 
-**소비자가 `thumbVisibility: false`나 `interactive: false`를 명시하면 Android 터치 사용자는 가로로 넘길 수 없다.** 그 값이 이기는 것이 이 결정의 요점이므로 막지 않는다. 대신 클래스 doc이 그것을 경고한다.
+**If the consumer states `thumbVisibility: false` or `interactive: false`, Android touch users cannot scroll horizontally.** That value winning is the point of this decision, so it is not blocked. Instead the class doc warns about it.
 
-**`interactive`를 켜면 track 탭도 켜진다.** Android에서 바 자리를 탭만 해도 한 페이지 넘어가고(400×300, 80줄에서 0 → 320), 그 띠의 터치는 텍스트에 닿지 않는다. Material `Scrollbar`는 드래그와 track 탭을 따로 끌 파라미터가 없다. grilling에서 `interactive: true`를 정할 때는 이 결과를 보지 못했고, 측정 후 메인테이너가 대가로 받아들였다(2026-10-19). 테스트가 이 동작을 고정한다.
+**Turning on `interactive` turns on track taps too.** On Android, just tapping where the bar is moves one page (400×300, 80 lines: 0 → 320), and touches in that strip do not reach the text. Material `Scrollbar` has no parameter to turn off dragging and track taps separately. When `interactive: true` was decided in the grilling this result had not been seen, and after measurement the maintainer accepted it as the cost (2026-10-19). A test pins this behaviour.
 
-**Android에서만 채운다.** 측정으로 확인한 곳이 Android뿐이고, Material `Scrollbar`가 자기 Android 분기(`interactive` 기본 false)를 타는 플랫폼도 그것 하나다. 그렇다고 문제가 Android에만 있다는 뜻은 아니다 — 두 번째 원인(투명한 thumb은 히트를 받지 않는다)은 thumb이 숨은 채 시작하고 가로 드래그를 선택이 가져가는 곳이면 어디든 해당할 수 있다. iOS는 widget test에서 같은 0.0이 나왔지만 Cupertino는 제스처 체계가 다르고 기기로 재지 않았으므로 [#30](https://github.com/kihyun1998/flutter_syntax_highlight/issues/30)으로 뺐다. 다른 플랫폼은 재지 않았다.
+**It fills them only on Android.** Android is the only place confirmed by measurement, and it is also the only platform where Material `Scrollbar` takes its own Android branch (`interactive` defaulting to false). That does not mean the problem is only on Android — the second cause (a transparent thumb takes no hits) can apply anywhere the thumb starts hidden and selection takes the horizontal drag. iOS gave the same 0.0 in a widget test, but Cupertino has a different gesture system and it was not measured on a device, so it was split out to [#30](https://github.com/kihyun1998/flutter_syntax_highlight/issues/30). Other platforms were not measured.
 
-**`scrollable: true`에서 가로 바는 바깥에 둔다** (`notificationPredicate: depth == 1`). 세로 스크롤 뷰 안에 있으면 바가 내용 맨 끝(80줄이면 y≈1472)에 그려져, 끌 수 있어도 보이지 않는다.
+**With `scrollable: true`, the horizontal bar is placed outside** (`notificationPredicate: depth == 1`). Inside the vertical scroll view the bar is drawn at the very end of the content (y≈1472 for 80 lines), so even if it can be dragged it cannot be seen.
 
-**바는 화면 inset을 따르지 않는다.** grilling에서는 "기본 `padding` 16이 Android thumb 4px를 감싸니 마지막 줄을 가리지 않는다"고 보고 따로 묻지 않았는데, 그 계산은 틀렸다. Material `Scrollbar`는 painter에 `MediaQuery.paddingOf(context)`를 그대로 넣고(Flutter 3.41.9 `material/scrollbar.dart`의 `updateScrollbarPainter`), 그것을 끌 파라미터가 없다. 위젯이 화면 중간에 있어도 그 값이 내려와, 에뮬레이터(bottom padding 24)에서 가로 바가 마지막 줄 글자 위에 겹쳤다(2026-10-19). 수정 전에도 같은 계산이었지만 Android에서는 바가 투명해 보이지 않았다.
+**The bar does not follow the screen inset.** In the grilling this was not asked separately, on the reckoning that "the default `padding` of 16 wraps the 4px Android thumb, so it does not cover the last line", and that reckoning was wrong. Material `Scrollbar` passes `MediaQuery.paddingOf(context)` straight into the painter (`updateScrollbarPainter` in Flutter 3.41.9 `material/scrollbar.dart`), and there is no parameter to turn that off. Even with the widget in the middle of the screen that value comes down, and on the emulator (bottom padding 24) the horizontal bar overlapped the glyphs of the last line (2026-10-19). The reckoning was the same before the fix too, but on Android the bar was transparent and could not be seen.
 
-[#31](https://github.com/kihyun1998/flutter_syntax_highlight/issues/31)에서 메인테이너가 정했다(2026-10-20): **두 바 모두, 네 방향 모두** 그 padding을 지운다. 위 문단의 "inset은 앱의 일"을 그대로 따른 것이다 — 화면 기준 inset은 자기 위치를 모르는 위젯의 바에게 어느 방향이든 틀린 값이다. 함께 제시된 대안은 "가로 바의 bottom만"(이슈의 첫 단계)과 "가로 바의 네 방향"이었다. 고를 때 세로 바가 어떻게 바뀌는지는 재지 않았다. 지금은 위젯 테스트가 그것을 고정한다(네 방향 24일 때 세로 track이 위아래 끝까지 닿는다). 위젯은 바 둘레에서만 padding을 지우고, 그 안의 코드에는 바깥 `MediaQuery`를 되돌려 준다. 선택 툴바와 핸들은 화면의 inset을 봐야 하기 때문이다.
+In [#31](https://github.com/kihyun1998/flutter_syntax_highlight/issues/31) the maintainer decided (2026-10-20): that padding is removed for **both bars, on all four sides.** It follows the paragraph above's "inset is the app's job" as is — a screen-based inset is the wrong value, in any direction, for the bar of a widget that does not know its own position. The alternatives put forward with it were "only the horizontal bar's bottom" (the issue's first step) and "all four sides of the horizontal bar". When choosing, how the vertical bar changes was not measured. Now a widget test pins it (with 24 on all four sides, the vertical track reaches the top and bottom ends). The widget removes the padding only around the bars, and gives the code inside them back the outer `MediaQuery`, because the selection toolbar and handles have to see the screen's inset.
 
-**데스크톱의 자동 세로 바는 세로 뷰에서만 끈다.** Material의 `MaterialScrollBehavior.buildScrollbar`는 데스크톱에서 세로 `Scrollable`마다 `Scrollbar`를 붙인다. 그래서 `scrollable: true`에서는 세로 뷰에 이 위젯의 바와 같은 컨트롤러를 그리는 바가 하나 더 있었고, 스크롤하면 둘 다 보였다(widget test, windows, 400×300, 80줄: 바 4개 중 둘이 `_vertical`, 2026-10-20). 세로 뷰를 `ScrollConfiguration.of(context).copyWith(scrollbars: false)`로 감싼다. 새 `ScrollBehavior`가 아니라 앱의 것을 복사하므로 `dragDevices` 같은 앱의 나머지 설정은 그대로 걸린다.
+**The automatic vertical bar on desktop is turned off only in the vertical view.** Material's `MaterialScrollBehavior.buildScrollbar` attaches a `Scrollbar` to every vertical `Scrollable` on desktop. So with `scrollable: true` the vertical view had one more bar drawing the same controller as this widget's bar, and scrolling showed both (widget test, windows, 400×300, 80 lines: two of the 4 bars were `_vertical`, 2026-10-20). The vertical view is wrapped in `ScrollConfiguration.of(context).copyWith(scrollbars: false)`. It copies the app's `ScrollBehavior` rather than making a new one, so the rest of the app's settings, such as `dragDevices`, still apply.
 
-`SelectableText` 안쪽 `EditableText`의 자동 바는 남긴다. `EditableText`는 바깥 behavior를 `copyWith(scrollbars: _isMultiline)`으로 다시 켜므로 위 감싸기에 걸리지 않는다(Flutter 3.41.9 `widgets/editable_text.dart`). 정상 사용에서는 스크롤할 길이가 0이라 보이지 않는다. `scrollable: false`를 높이가 정해진 자리에 넣으면 `EditableText`가 자기 안에서 스크롤하는데(같은 조건에서 max 1172), 그때 데스크톱에서 보이는 세로 바는 이것 하나뿐이다. [#32](https://github.com/kihyun1998/flutter_syntax_highlight/issues/32)에서 메인테이너가 정했다(2026-10-20): **중복된 바만 끈다.** 함께 제시된 대안은 `SelectableText.scrollBehavior`로 이 바까지 끄는 것이었고, 그 대가로 위 경우의 세로 바가 데스크톱에서도 사라진다는 것(지금의 Android와 같다)이 함께 제시됐다. 테스트가 이 바가 남는 것을 고정한다.
+The automatic bar of the `EditableText` inside `SelectableText` is kept. `EditableText` turns the outer behaviour back on with `copyWith(scrollbars: _isMultiline)`, so the wrapping above does not catch it (Flutter 3.41.9 `widgets/editable_text.dart`). In normal use its scroll extent is 0, so it is not visible. When `scrollable: false` is placed somewhere with a fixed height, `EditableText` scrolls inside itself (max 1172 under the same conditions), and then this is the only vertical bar visible on desktop. In [#32](https://github.com/kihyun1998/flutter_syntax_highlight/issues/32) the maintainer decided (2026-10-20): **turn off only the duplicate bar.** The alternative put forward with it was turning this bar off too with `SelectableText.scrollBehavior`, and put forward with that was its cost: the vertical bar in the case above would disappear on desktop as well (the same as Android now). A test pins that this bar stays.
 
-**시스템 제스처 영역은 앱 레이어의 일이다.** 위젯이 화면 맨 아래에 놓이면 thumb이 그 영역에 걸린다. 에뮬레이터에서는 그 자리의 드래그가 일부만 전달됐다(30.8, 77.1 / 127). 위젯은 자기가 화면 어디에 놓였는지 모르므로 `systemGestureInsets`를 읽어 피하지 않는다. doc에 적는다.
+**The system gesture area is the app layer's job.** If the widget sits at the very bottom of the screen, the thumb falls into that area. On the emulator, drags there were only partly delivered (30.8, 77.1 / 127). The widget does not know where on the screen it sits, so it does not read `systemGestureInsets` to avoid it. The doc says so.
 
-**ADR-0002의 "위젯 자신의 컨트롤도 팔레트를 따라간다"를 좁힌다.** 따라가는 것은 **색**이다. 그 문장을 테마를 통째로 갈아 끼우는 것으로 구현한 것이, 프리셋 아래에서 소비자의 opt-in이 0.0이 된 이유다.
+**This narrows ADR-0002's "The widget's own controls follow the palette too".** What follows is the **colour**. Implementing that sentence as replacing the theme wholesale is why the consumer's opt-in became 0.0 under a preset.

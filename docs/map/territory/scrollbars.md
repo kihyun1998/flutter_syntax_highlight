@@ -46,9 +46,7 @@ From ADR-0004 and `_SyntaxTextState.build` comments:
 - `lib/src/widget/syntax_text.dart — _SyntaxTextState.build`: `insetFree`,
   both `Scrollbar`s, `ScrollConfiguration`, `bars`, `android`, the final
   `ScrollbarTheme`.
-- Tests: `test/widget/syntax_text_test.dart` groups `가로 스크롤바는 터치에서
-  끌린다`, `스크롤바는 화면 inset이 아니라 위젯 영역을 따른다`, `데스크톱에서
-  세로 바는 하나다`.
+- Tests: `test/widget/syntax_text_test.dart` groups `the horizontal scrollbar drags on touch`, `scrollbars follow the widget area, not the screen inset`, `on desktop there is one vertical bar`.
 
 ## Reference behaviour
 

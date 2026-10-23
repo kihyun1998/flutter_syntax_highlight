@@ -28,8 +28,7 @@ From `pubspec.yaml`, `.pubignore` and `.github/dependabot.yml` comments:
   cache. `example/macos/` and `example/web/` stay out of the archive (pub.dev's
   example tab reads `example/lib/main.dart` and `example/README.md`).
 - No `flutter:` section — an empty key reads as something removed.
-- `NOTICES` must be in the archive — `test/widget/presets_test.dart` `배포물에
-  실린다` checks `.pubignore` does not exclude it.
+- `NOTICES` must be in the archive — `test/widget/presets_test.dart` `ships in the package` checks `.pubignore` does not exclude it.
 - Dependabot opens weekly pub PRs at the root only, labelled `needs-triage`
   (#33).
 

@@ -41,9 +41,7 @@ From the `SyntaxText` class doc and `_SyntaxTextState` comments:
 - `lib/src/widget/syntax_text.dart — SyntaxText` (fields, class doc),
   `_SyntaxTextState.initState`, `didUpdateWidget`, `build` (span tree, root
   style, `ColoredBox`, `chrome`).
-- Tests: `test/widget/syntax_text_test.dart` groups `하이라이터는 붙여넣을 것을
-  바꾸지 못한다`, `팔레트가 실제로 그려진다`, `배경`, `source가 바뀌면 다시
-  토크나이즈한다`, `소비자가 넘긴 값이 실제로 쓰인다`.
+- Tests: `test/widget/syntax_text_test.dart` groups `the highlighter cannot change what gets pasted`, `the palette is actually drawn — read from the leaves, not the object`, `background`, `re-tokenizes when source changes`, `values the consumer passes are actually used`.
 
 ## Reference behaviour
 

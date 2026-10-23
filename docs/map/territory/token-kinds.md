@@ -28,7 +28,7 @@ From ADR-0001 and the `DartTokenKind` doc comments:
   land there; whitespace before `(` makes it `plain`; a keyword wins (`if(x)`).
 - `string` is not a whole literal: escapes and interpolations are cut out, and
   the inside of `${…}` comes back as ordinary kinds. That is why there is no
-  `interpolation` kind ("할 일이 없어서 없다").
+  `interpolation` kind ("there is nothing for it to do").
 - `escape` is a backslash and one following character, never in a raw string.
 - `DartToken.text` is a slice of the source, never rewritten.
 

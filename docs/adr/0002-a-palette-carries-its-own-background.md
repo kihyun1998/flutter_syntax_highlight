@@ -1,37 +1,37 @@
-# 팔레트가 자기 배경을 들고, 파생 기본값은 들지 않는다
+# A palette carries its own background, and the derived default does not
 
-`SyntaxPalette`에 `Color? background`가 있다. 실명 프리셋 열 개는 전부 그것을 채우고, `SyntaxPalette.fromColorScheme`은 **비워 둔다.** 두 결정은 반대처럼 보이지만 같은 규칙의 두 경우다: **색을 고른 사람이 그 색이 놓일 자리도 정한다.**
+`SyntaxPalette` has a `Color? background`. All ten named presets fill it, and `SyntaxPalette.fromColorScheme` **leaves it empty.** The two decisions look opposite but are two cases of the same rule: **whoever picks a colour also decides where it sits.**
 
-파생 기본값은 앱의 `ColorScheme`에서 색을 뽑는다. 그 색을 고른 것은 앱이고, 앱은 이미 자기 surface를 칠해 두었다 — 그래서 올바른 배경은 앱의 것이고, 여기서 `scheme.surface`를 다시 칠하면 같은 색을 한 겹 더 얹으면서 앱이 코드 블록만 다른 surface 위에 올릴 자유를 뺏는다.
+The derived default draws its colours from the app's `ColorScheme`. The app picked those colours, and the app has already painted its own surface — so the right background is the app's, and painting `scheme.surface` again here would lay the same colour on one more time while taking away the app's freedom to put just the code block on a different surface.
 
-실명 프리셋은 반대다. 그 색들은 상류가 **특정한 배경 위에서** 고른 것이다. 배경 없이 옮기면 원본이 정한 대비가 사라지고, 남은 것은 앱의 surface에 대고 재는 우연이다.
+The named presets are the opposite. Their colours were picked upstream **against a particular background.** Carried over without it, the contrast the original set disappears, and what is left is chance, measured against the app's surface.
 
 ## Context
 
-프리셋이 붙을 때(#6 → #9) 프레임은 *"원본이 우리 여덟 kind에 해당하는 scope에 준 색을 뽑아 온다"*였다. 프레임이 kind 목록이었고 **배경은 kind가 아니라서 거기 없었다.** 그래서 아무도 묻지 않았고, `SyntaxPalette`는 필드 여덟 개가 전부 `TextStyle?`인 채로, `lib/` 전체에 `ColoredBox` 하나 없이 남았다.
+When the presets went in (#6 → #9), the frame was *"take the colours the original gave to the scopes matching our eight kinds"*. The frame was the kind list, and **the background is not a kind, so it was not there.** So nobody asked, and `SyntaxPalette` stayed with eight fields that were all `TextStyle?`, with not a single `ColoredBox` anywhere in `lib/`.
 
-발견은 #21의 스크린샷에서 나왔다. 라이트 앱에서 `oneDark`를 고르면 글자만 One Dark 색이 되고 배경은 앱의 라이트 surface 그대로다.
+The discovery came from a screenshot in #21. Picking `oneDark` in a light app turned only the text into One Dark colours, and the background stayed the app's light surface.
 
-## 그 부재가 만든 거짓 논증
+## The false argument that absence produced
 
-`syntax_palette.dart`와 `example/README.md`가 이렇게 적고 있었다:
+`syntax_palette.dart` and `example/README.md` said:
 
-> 실명 프리셋은 하드코딩된 팔레트라 반대 밝기에서 깨지는 정도가 아니라 **보이지 않는다** — `cobalt2`의 본문 `#FFFFFF`는 명도비 **1.00**.
+> A named preset is a hard-coded palette, so in the opposite brightness it does not just break, it is **invisible** — `cobalt2`'s body text `#FFFFFF` has a contrast ratio of **1.00**.
 
-그리고 거기서 *"원본에 짝이 있으면 짝으로 싣는다"*와 *"기본값은 프리셋이 아니다"*를 끌어냈다.
+And from there they derived *"if the original has a pair, ship it as a pair"* and *"the default is not a preset"*.
 
-**수치는 맞았고 재는 대상이 틀렸다.** 1.00은 흰 본문을 *앱의* 라이트 surface에 대고 잰 값이다. 팔레트가 배경을 들고 있지 않아서 그것 말고는 잴 것이 없었고, 그러자 빠진 필드가 프리셋의 성질처럼 읽혔다. 자기 배경 `#193549`에 대고 재면 **12.75**다(2026-09-07 측정).
+**The number was right and the thing measured against was wrong.** 1.00 is white body text measured against *the app's* light surface. Because the palette did not carry a background, there was nothing else to measure against, and so the missing field read as a property of the preset. Measured against its own background `#193549`, it is **12.75** (measured 2026-09-07).
 
-열 개 전부를 자기 배경에 대고 재면 본문 명도비가 **4.13 ~ 13.94**다. 바닥인 4.13은 `solarizedLight`이고, 그 값은 상류가 정한 것이라 이 패키지가 올릴 수 없다.
+Measuring all ten against their own backgrounds, the body contrast ratio is **4.13 – 13.94**. The floor, 4.13, is `solarizedLight`, and that value was set upstream, so this package cannot raise it.
 
 ## Consequences
 
-**짝으로 싣는 이유가 바뀐다.** 가독성이 아니라 **밝기 취향**이다 — 라이트 앱에 `oneDark`를 얹으면 읽기는 잘 읽히지만 코드 블록만 어둡다. 고를 것이 있어야 한다. 결론(짝으로 싣는다)은 그대로고 근거가 교체됐다.
+**The reason for shipping pairs changes.** It is not legibility but **brightness preference** — `oneDark` in a light app reads fine, but only the code block is dark. There has to be something to choose. The conclusion (ship them as pairs) stands; the grounds were replaced.
 
-**breaking change가 아니다.** named optional 필드이고, 배경은 kind가 아니므로 `styleFor`의 전수 `switch`도 소비자의 `switch`도 건드리지 않는다. [ADR-0001](0001-token-kinds-are-lexical-only.md)이 kind 추가를 공개 후 breaking으로 못 박은 것과 다른 축이다 — 그 문장이 *"팔레트에 무엇도 더할 수 없다"*로 읽히지 않도록 여기 적어 둔다.
+**It is not a breaking change.** It is a named optional field, and the background is not a kind, so it touches neither the exhaustive `switch` in `styleFor` nor a consumer's `switch`. It is a different axis from [ADR-0001](0001-token-kinds-are-lexical-only.md) nailing down adding a kind as breaking after publishing — written down here so that sentence is not read as *"nothing can be added to a palette"*.
 
-**배경을 주는 팔레트는 `plain`도 줘야 한다.** 루트 스타일의 색은 `ColorScheme.onSurface`이고 그것은 앱의 surface에 대고 고른 색인데, 이제 뒤에 있는 것이 그 surface가 아니다. 프리셋 열 개는 전부 둘 다 준다.
+**A palette that gives a background must also give `plain`.** The root style's colour is `ColorScheme.onSurface`, which was picked against the app's surface, and what is behind it is now not that surface. All ten presets give both.
 
-**위젯 자신의 컨트롤도 팔레트를 따라간다.** 복사 버튼과 스크롤바가 앱 테마의 `onSurfaceVariant`로 그려지면 남의 배경 위에서 묻힌다. 배경이 있을 때는 팔레트의 `comment`/`plain` 색에서 가져온다. ([ADR-0004](0004-the-widget-fills-only-the-scrollbar-fields-nobody-set.md)가 스크롤바에 대해 이것을 **색**으로 좁혔다 — 동작과 모양은 앱의 스크롤바 테마가 정한다.)
+**The widget's own controls follow the palette too.** If the copy button and the scrollbar are drawn with the app theme's `onSurfaceVariant`, they sink into someone else's background. When there is a background, they take the palette's `comment`/`plain` colours. ([ADR-0004](0004-the-widget-fills-only-the-scrollbar-fields-nobody-set.md) narrowed this to **colour** for the scrollbar — the behaviour and shape are decided by the app's scrollbar theme.)
 
-**배경은 `Stack`보다 바깥에 칠한다.** `Stack`의 기본 `fit`은 loose라, 안에 두면 배경이 코드 내용의 크기로 쪼그라들어 코드보다 넓은 pane에 칠하지 않은 자리가 남는다. 그 회귀는 테스트가 잡는다.
+**The background is painted outside the `Stack`.** The default `fit` of a `Stack` is loose, so inside it the background shrinks to the size of the code content and leaves unpainted area in a pane wider than the code. A test catches that regression.

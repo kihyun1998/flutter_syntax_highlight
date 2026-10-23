@@ -4,17 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_syntax_highlight/flutter_syntax_highlight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// 파생 기본값을 **하나의 스킴이 아니라 색상환 전체**에 대고 잰다.
+/// Measures the derived default against **the whole colour wheel, not one
+/// scheme**.
 ///
-/// 프리셋은 값이 고정이라 열 개를 재면 끝이지만, 파생은 소비자의 스킴이
-/// 무한하다. 자기 시드에서 눈으로 고른 계수는 그 시드에서만 맞는다.
+/// Presets have fixed values, so measuring the ten is the end of it, but for
+/// the derived palette the consumer's schemes are unbounded. A coefficient
+/// picked by eye on one's own seed is right only on that seed.
 ///
-/// 눈금 둘은 이 팔레트 자신이 이미 들고 있다: `onSurfaceVariant`와 `onSurface`의
-/// 차이가 ΔE 9.9이고 **그것은 스크린샷에서 거의 보이지 않았다**. `outline`과
-/// `onSurface`는 29.9이고 그것은 확실히 보인다. 새 구분들은 그 사이에 있어야
-/// 하고, 아래 바닥은 전부 아래쪽 눈금보다 위다.
+/// The palette already carries both marks itself: `onSurfaceVariant` and
+/// `onSurface` differ by ΔE 9.9, and **that was barely visible in the
+/// screenshot**. `outline` and `onSurface` are 29.9 apart, and that is clearly
+/// visible. The new distinctions must sit between the two, and every floor
+/// below is above the lower mark.
 const _hueStep = 30;
-const _tooSubtle = 9.9; // onSurfaceVariant vs onSurface, 같은 스윕에서 잰 값
+const _tooSubtle =
+    9.9; // onSurfaceVariant vs onSurface, measured on the same sweep
 
 double _lin(double v) =>
     v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4).toDouble();
@@ -27,9 +31,9 @@ double _contrast(Color a, Color b) {
   return (max(la, lb) + 0.05) / (min(la, lb) + 0.05);
 }
 
-/// CIE Lab (D65). 명도비는 **휘도만** 보므로 색상 차이를 재지 못한다 — 빨강과
-/// 초록이 같은 명도비를 가질 수 있다. 이 팔레트가 더하는 것이 색상이므로 여기서
-/// 필요한 자는 이쪽이다.
+/// CIE Lab (D65). Contrast ratio looks **only at luminance**, so it cannot
+/// measure a difference in hue — red and green can have the same contrast
+/// ratio. What this palette adds is hue, so this is the ruler needed here.
 List<double> _lab(Color c) {
   final r = _lin(c.r), g = _lin(c.g), b = _lin(c.b);
   final x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
@@ -46,7 +50,7 @@ double _deltaE(Color a, Color b) {
   return sqrt(pow(p[0] - q[0], 2) + pow(p[1] - q[1], 2) + pow(p[2] - q[2], 2));
 }
 
-/// 색상환 × 밝기 전체. 각 스킴마다 [probe]를 부른다.
+/// The whole colour wheel × brightness. Calls [probe] for each scheme.
 void _sweep(void Function(ColorScheme scheme, SyntaxPalette palette) probe) {
   for (var hue = 0; hue < 360; hue += _hueStep) {
     for (final brightness in [Brightness.light, Brightness.dark]) {
@@ -60,10 +64,11 @@ void _sweep(void Function(ColorScheme scheme, SyntaxPalette palette) probe) {
 }
 
 void main() {
-  group('파생 기본값 — 색상환 전체에서', () {
-    test('새로 생긴 구분 넷이 전부 "거의 안 보이던" 눈금 위에 있다', () {
-      // 이 넷이 이 팔레트가 앱의 accent를 빌려서 사는 것 전부다. 하나라도
-      // 눈금 아래로 내려가면 그 kind는 있으나 마나다.
+  group('Derived default — across the whole colour wheel', () {
+    test('all four new distinctions sit above the "barely visible" mark', () {
+      // These four are everything this palette buys by borrowing the app's
+      // accent. If any one drops below the mark, that kind might as well not
+      // be there.
       final floors = <String, double>{};
       _sweep((scheme, p) {
         void note(String k, double v) =>
@@ -81,16 +86,17 @@ void main() {
           e.value,
           greaterThan(_tooSubtle),
           reason:
-              '${e.key}이 ΔE ${e.value.toStringAsFixed(1)}로 '
-              '"거의 안 보이던" 눈금($_tooSubtle) 아래다',
+              '${e.key} is at ΔE ${e.value.toStringAsFixed(1)}, below the '
+              '"barely visible" mark ($_tooSubtle)',
         );
       }
     });
 
-    test('당긴 색들이 surface 위에서 이 팔레트의 기존 바닥보다 안전하다', () {
-      // 바닥을 새로 정하지 않는다. **이미 싣고 있는 것**을 바닥으로 쓴다 —
-      // `outline`(punctuation)이 이 팔레트가 이미 읽을 수 있다고 주장하는
-      // 최악값이고, 새 색이 그보다 나쁘면 그건 회귀다.
+    test('pulled colours are safer on surface than this palette\'s existing '
+        'floor', () {
+      // No new floor is set. **What is already shipped** is used as the floor
+      // — `outline` (punctuation) is the worst value this palette already
+      // claims is readable, and a new colour worse than that is a regression.
       _sweep((scheme, p) {
         final floor = _contrast(scheme.outline, scheme.surface);
         for (final e in {
@@ -101,20 +107,20 @@ void main() {
           expect(
             _contrast(e.value, scheme.surface),
             greaterThanOrEqualTo(floor),
-            reason: '${e.key}이 punctuation보다 읽기 어렵다',
+            reason: '${e.key} is harder to read than punctuation',
           );
         }
       });
     });
 
-    test('escape는 자기 리터럴과 같은 색이다', () {
+    test('escape is the same colour as its literal', () {
       _sweep((scheme, p) => expect(p.escape, p.string));
     });
 
-    test('그래도 자기 색상을 도입하지는 않는다', () {
-      // 앵커는 언제나 중성 역할이고 목적지는 **앱의** 역할이다. 그러므로
-      // 회색 스킴에서는 파생 팔레트도 회색이어야 한다 — 색을 들여왔다면
-      // 여기서 드러난다.
+    test('still introduces no hue of its own', () {
+      // The anchor is always a neutral role and the target is **the app's**
+      // role. So on a grey scheme the derived palette must be grey too — if
+      // it brought in a colour, it shows here.
       final grey = ColorScheme.fromSeed(
         seedColor: const Color(0xFF000000),
         dynamicSchemeVariant: DynamicSchemeVariant.monochrome,

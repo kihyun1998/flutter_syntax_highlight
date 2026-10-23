@@ -1,35 +1,35 @@
 # CONTEXT
 
-이 저장소의 용어집. 구현 세부는 여기 쓰지 않는다.
+The glossary for this repository. Implementation detail does not go here.
 
-## 토큰
+## Tokens
 
-**Token kind** — 한 문자열 구간을 *다르게 그릴 목적으로* 분류한 이름. 무엇을 *의미*하는지가 아니라 무엇으로 *보이는지*를 정한다. `DartTokenKind`가 그 목록이다.
+**Token kind** — a name for a class of text span, classified *in order to draw it differently*. It decides what the span *looks like*, not what it *means*. `DartTokenKind` is the list.
 
-**어휘로 확정되는 구분 (lexically decidable)** — 문자를 왼쪽에서 오른쪽으로 훑는 스캐너가 확실하게 정할 수 있는 구분. `\` 다음 한 글자는 escape다. `(` 바로 앞의 식별자는 호출 위치의 이름이다.
+**Lexically decidable** — a distinction that a scanner sweeping characters left to right can decide for certain. The one character after `\` is an escape. The identifier directly before `(` is the name at a call site.
 
-**추측 (guess)** — 어휘만으로는 정해지지 않아 관습에 기대야 하는 구분. 대문자로 시작하니 타입일 것이다, 같은 것. **kind가 되지 못한다.** 반쯤 맞는 답은 읽는 사람이 믿어 버리기 때문에 답이 없는 것보다 나쁘다.
+**Guess** — a distinction that the lexicon alone does not decide, so it has to lean on convention. It starts with a capital, so it is probably a type, and the like. **It cannot become a kind.** A half-right answer is worse than no answer, because the reader believes it.
 
-**Partition** — `tokenizeDart`가 돌려준 토큰들의 `text`를 순서대로 이어 붙이면 입력과 바이트 단위로 같다는 성질. 토큰은 기록된 오프셋에서 잘라 내며(`source.substring(previousEnd, thisEnd)`), 다시 만들어지지 않는다. 이 패키지의 핵심 주장이다.
+**Partition** — the property that concatenating the `text` of the tokens `tokenizeDart` returns, in order, equals the input byte for byte. Tokens are cut at recorded offsets (`source.substring(previousEnd, thisEnd)`) and never rebuilt. It is this package's central claim.
 
-## 층
+## Layers
 
-**Tokenizer** — kind가 *무엇인지*를 정한다. 순수 Dart이고 아무것도 import하지 않는다. Flutter도, `dart:*`도.
+**Tokenizer** — decides *what* a kind is. Pure Dart, and imports nothing. Not Flutter, not `dart:*`.
 
-**Widget** — kind가 *어떻게 보이는지*를 정한다. 토크나이저가 가질 수 없는 의견은 여기 산다.
+**Widget** — decides *how* a kind looks. The opinions the tokenizer cannot hold live here.
 
-**Seam (이음매)** — 위 둘 사이의 선. 토크나이저가 `Color`를 아는 순간 두 층이 용접되고, 그러면 렌더링 없이는 테스트할 수 없다.
+**Seam** — the line between the two above. The moment the tokenizer knows about `Color`, the two layers are welded, and then it cannot be tested without rendering.
 
-**Palette** — kind마다 `TextStyle`을 하나씩 들고 있는 값. 테마 엔진이 아니라 데이터 여덟 칸이고, 주지 않은 칸은 null로 남아 루트 스타일을 물려받는다.
+**Palette** — a value that holds one `TextStyle` per kind. Not a theme engine but eight slots of data; a slot not given stays null and inherits the root style.
 
-처음에는 이것을 "평범한 Map"이라고 적었다. 실제로는 이름 붙은 필드와 전수 `switch`다 — kind가 하나 더해지면 그 `switch`가 **컴파일되지 않는다.** Map이면 빠진 칸이 null로 조용히 통과하는데, [[adr-0001]]이 kind 추가를 공개 후 breaking change로 기록했으므로 그 순간이 조용히 지나가서는 안 된다.
+At first this was written down as "a plain Map". In fact it is named fields and an exhaustive `switch` — when one more kind is added, that `switch` **does not compile.** With a Map the missing slot would pass silently as null, and since [[adr-0001]] recorded adding a kind as a breaking change after publishing, that moment must not pass silently.
 
-**색상을 더하지 않는다 (hue-neutral)** — 기본 팔레트의 성격. `ColorScheme`의 `onSurface` / `onSurfaceVariant` / `outline` 세 역할만 읽고 **자기 색상을 도입하지 않는다.** 앱이 무채색이면 무채색이 되고, 색이 있으면 그 색에 섞인다. 파생이기 때문에 라이트와 다크 양쪽이 설정 없이 맞는다.
+**Hue-neutral** — the character of the default palette. It reads only three roles of the `ColorScheme`, `onSurface` / `onSurfaceVariant` / `outline`, and **introduces no hue of its own.** If the app is achromatic it is achromatic; if the app has colour it blends into that colour. Because it is derived, it is right in both light and dark with nothing to configure.
 
-**"무채색(achromatic)"이라고 부르지 않는다.** 참조 구현이 그렇게 불렀지만 그 근거는 host 앱의 스킴이 monochrome이라 **가져올 색상이 애초에 없었다**는 것이었다. 소비자의 스킴은 색이 있을 수 있고, 실측하면 `ColorScheme.fromSeed(0xFF6750A4)`의 `outline`은 hue 270이다 — 그 팔레트는 무채색이 아니다. 조건이 아니라 성질을 이름으로 삼는다.
+**Do not call it "achromatic".** The reference called it that, but the ground was that the host app's scheme was monochrome, so **there was no hue to take in the first place**. A consumer's scheme may have colour, and measured, the `outline` of `ColorScheme.fromSeed(0xFF6750A4)` is hue 270 — that palette is not achromatic. Name the property, not the condition.
 
-## 재료
+## Material
 
-**Reference (참조 구현)** — `reference/`에 있는, `flutter_table_plus`에서 바이트 그대로 떠 온 4개 파일. 패키지의 일부가 아니고, 손대지 않는다. 구현은 여기서 복사해 가고 자기 결과물을 이것과 대조한다.
+**Reference** — the 4 files in `reference/`, lifted byte for byte from `flutter_table_plus`. Not part of the package, and not touched. The implementation copies from here and checks its own output against it.
 
-**Corpus** — partition 성질을 시험하기 위해 토크나이저에 먹이는 Dart 코드 뭉치. 직접 쓴 fixture와 이 패키지 자신의 `lib/` 소스로 이루어진다.
+**Corpus** — the body of Dart code fed to the tokenizer to test the partition property. It is made of hand-written fixtures and this package's own `lib/` source.

@@ -12,7 +12,7 @@ damage from malformed input can spread.
 
 - [ADR-0001](../../adr/0001-token-kinds-are-lexical-only.md) — decided which
   kinds exist, and its *Consequences* decided that interpolation insides are
-  re-tokenized with the outside rules; its *이후 기록* records the one partition
+  re-tokenized with the outside rules; its *Later record* records the one partition
   break and how it was removed.
 
 ## Design model
@@ -92,7 +92,7 @@ From the `dart_tokenizer.dart` library doc, its function docs and ADR-0001:
   bounded only by the stack. Not measured.
 - The fuzz count behind "the guard is never reached" differs between sources,
   both dated 2026-09-06: `tokenizeDart`'s `emit` comment says 200,000 inputs,
-  ADR-0001's *이후 기록* says 300,000.
+  ADR-0001's *Later record* says 300,000.
 - Size: `tokenizeDart` runs on the UI isolate inside `SyntaxText`; the largest
   measured input is this file itself (3101 tokens, 2026-09-06). No bound or
   off-thread path exists.

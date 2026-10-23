@@ -6,7 +6,7 @@
 punctuation escape function` — and every place that maps a kind to a look
 enumerates all eight. Adding or removing one is a breaking change after
 publication ([ADR-0001](../../adr/0001-token-kinds-are-lexical-only.md),
-*이 목록은 사실상 영구적이다*).
+*This list is effectively permanent*).
 
 ## Why it is cross-cutting
 
@@ -51,7 +51,7 @@ stops compiling on `pub upgrade`.
 - `styleFor`'s exhaustiveness was chosen as the alarm, and the palette's
   "plain Map" description was corrected to named fields (GLOSSARY.md,
   *Palette*; commit `76ef1e4`, 2026-09-06).
-- `test/widget/syntax_palette_test.dart`, `styleFor의 배선` — each kind reaches
+- `test/widget/syntax_palette_test.dart`, `wiring of styleFor` — each kind reaches
   its own field.
 
 ## Where it will recur
@@ -59,5 +59,5 @@ stops compiling on `pub upgrade`.
 Anything that wants a finer distinction (type vs variable, annotation,
 operator, interpolation — all rejected in ADR-0001) or any new field on
 `SyntaxPalette`. A new field that is *not* a kind, as `background` was, is not
-breaking (ADR-0002, *breaking change가 아니다*) — the question to ask is whether
+breaking (ADR-0002, *It is not a breaking change*) — the question to ask is whether
 the new thing is a kind.

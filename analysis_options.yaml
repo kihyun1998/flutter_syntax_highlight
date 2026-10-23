@@ -2,14 +2,16 @@ include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    # 참조 구현 스냅샷. 패키지의 일부가 아니고 `package:example/...`를 import
-    # 하므로 여기서는 컴파일되지 않는다. 손대지 않고 두는 것이 요점이므로
-    # 분석에서도 제외한다 — reference/README.md 참조.
+    # The reference snapshot. It is not part of the package, and it imports
+    # `package:example/...`, so it does not compile here. Leaving it untouched
+    # is the point, so it is excluded from analysis too — see
+    # reference/README.md.
     - reference/**
     - build/**
 
-    # 아래 여섯 줄은 이 패키지에 존재하지 않는 디렉터리를 가리킨다. 지워도
-    # `flutter pub get`이 그때마다 다시 넣는다(측정함). 도구가 임자이므로 둔다.
+    # The six lines below point at directories that do not exist in this
+    # package. Delete them and `flutter pub get` puts them back every time
+    # (measured). The tool owns them, so they stay.
     - android/**
     - ios/**
     - web/**

@@ -34,8 +34,7 @@ From the `SyntaxText` class doc, measured where marked:
 - `lib/src/widget/syntax_text.dart — SyntaxText.scrollable`;
   `_SyntaxTextState._vertical`, `_horizontal`; the `SingleChildScrollView`s in
   `build`.
-- Tests: `test/widget/syntax_text_test.dart` groups `스크롤`, `스크롤이 실제로
-  움직인다`.
+- Tests: `test/widget/syntax_text_test.dart` groups `scrolling`, `scrolling actually moves`.
 
 ## Reference behaviour
 

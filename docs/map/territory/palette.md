@@ -34,8 +34,7 @@ From the `SyntaxPalette` doc comments and the ADRs:
 
 - `lib/src/widget/syntax_palette.dart — SyntaxPalette` (constructor, fields,
   `==`, `hashCode`, `styleFor`); `part 'syntax_presets.dart'` holds preset data.
-- Tests: `test/widget/syntax_palette_test.dart` groups `styleFor의 배선`, `값
-  동등성`, `직접 만들기`.
+- Tests: `test/widget/syntax_palette_test.dart` groups `wiring of styleFor`, `value equality`, `building your own`.
 
 ## Reference behaviour
 

@@ -3,29 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/partition.dart';
 
-// 이 스위트의 하중을 받는 주장은 "색이 맞는가"가 아니라 "무엇이든 바뀌었는가"다.
-// 하이라이터는 소비자의 바이트와 화면 사이에 서는 물건이고, 화면에 보이는 것이
-// 붙여넣을 수 있는 그 파일이라는 것이 이 패키지의 주장이기 때문이다.
+// The load-bearing claim of this suite is not "are the colours right" but "did
+// anything change". A highlighter is a thing that stands between the
+// consumer's bytes and the screen, and this package's claim is that what is on
+// screen is the file you can paste.
 //
-// 아래의 보간 세 사례는 참조 corpus에서 그대로 옮겨 왔다. 2026-09-02 측정 기준
-// 그 corpus 2603줄에서 어휘적으로 어려웠던 유일한 구문이며, 원본이 나중에
-// 고쳐 쓰이더라도 스캐너가 그것들에 대해 고정되도록 여기 재현한다.
+// The three interpolation sites below were carried over verbatim from the
+// reference corpus. Measured 2026-09-02, they were the only lexically hard
+// constructs in that corpus's 2603 lines, and they are reproduced here so the
+// scanner stays pinned to them even if the originals are rewritten later.
 
-/// 토큰 스트림을 `kind|text` 줄들로 편다.
+/// Flattens a token stream into `kind|text` lines.
 ///
-/// 보간 검사는 **성질이 아니라 스트림 전체를 비교한다.** 다섯 입력은 전부
-/// 정전(canon)이고, 성질만 보는 검사는 통과하는 잘못된 스트림이 항상 존재한다.
-/// 무엇이 바뀌든 반드시 빨간색이 되어야 한다.
+/// The interpolation checks **compare the whole stream, not a property.** All
+/// five inputs are canon, and for a check that looks only at a property there
+/// is always a wrong stream that passes. Whatever changes, it has to go red.
 List<String> streamOf(String source) => tokenizeDart(
   source,
 ).map((t) => '${t.kind.name}|${t.text}').toList(growable: false);
 
 void main() {
-  group('partition — 붙여넣기 계약이 기대는 성질', () {
-    test('그리고 이 체크아웃이 오늘 만들어내지 않을 줄바꿈 방식에 대해서도', () {
-      // 여러 줄 리터럴이 아니라 escape다: 이 파일도 체크아웃의 줄바꿈 정규화를
-      // 똑같이 받으므로, 리터럴로 쓰면 의도한 것이 아니라 체크아웃이 만들어낸
-      // 것을 주장하게 된다. escape만이 체크아웃에 면역이다.
+  group('partition — the property the paste contract leans on', () {
+    test('and for line endings this checkout will not produce today', () {
+      // Escapes, not a multi-line literal: this file gets the checkout's
+      // line-ending normalisation just the same, so writing it as a literal
+      // would assert what the checkout produced, not what was intended. Only
+      // escapes are immune to the checkout.
       const awkward =
           'class A {\r\n'
           '  // a comment with CRLF\r\n'
@@ -33,27 +36,30 @@ void main() {
           '\tfinal x = 1;\n'
           '  // no trailing newline';
 
-      // 부수 조건 - 토큰 하나가 전부를 덮어도 partition은 만족된다 - 은 이제
-      // `expectPartitions`가 모든 호출부에 대해 들고 있다.
+      // The side condition - the partition is satisfied even if one token
+      // covers everything - is now carried by `expectPartitions` for every
+      // call site.
       expectPartitions(awkward);
     });
 
-    test('그리고 빈 파일에 대해서도', () {
+    test('and for an empty file too', () {
       expect(tokenizeDart(''), isEmpty);
     });
   });
 
-  group('주석은 통째로 소비된다', () {
-    // 2026-09-02 측정: 참조 corpus 열한 파일 중 열 파일에서 홑따옴표 하나만 든
-    // 주석 줄이 54개였고, corpus에서 가장 흔한 위험이었다.
+  group('a comment is consumed whole', () {
+    // Measured 2026-09-02: in ten of the eleven files of the reference corpus,
+    // 54 comment lines held a lone apostrophe, the most common hazard in the
+    // corpus.
     //
-    // 그것을 막는 것은 주석 전체가 한 단계에 소비되어 주석 안의 어떤 문자도
-    // 분기에 걸리지 않는다는 사실이지, 분기의 순서가 **아니다**. 이 주석의 앞선
-    // 판본은 순서라고 주장했다. 한 문자는 `/`이거나 `'`이지 둘 다일 수 없으므로
-    // 두 갈래는 상호 배타적이고 순서를 바꾸는 것은 아무 일도 하지 않는다.
-    // 측정으로 확인했고, 이 둘을 실제로 빨갛게 만드는 변형은 줄 주석 스캐너를
-    // 불구로 만드는 것이었다.
-    test('주석 안의 아포스트로피는 문자열을 열지 않는다', () {
+    // What prevents it is the fact that the whole comment is consumed in one
+    // step, so no character inside a comment is ever dispatched on — it is
+    // **not** the order of the branches. An earlier version of this comment
+    // claimed it was. A character is either `/` or `'` and never both, so the
+    // two arms are mutually exclusive and reordering them does nothing. That
+    // was confirmed by measurement, and the mutation that actually turned
+    // these two red was crippling the line comment scanner.
+    test('an apostrophe inside a comment does not open a string', () {
       const source = "// somebody's name\nfinal x = 1;\n";
       final tokens = tokenizeDart(source);
 
@@ -63,9 +69,9 @@ void main() {
       expect(
         tokens.any((t) => t.kind == DartTokenKind.string),
         isFalse,
-        reason: '아포스트로피가 따옴표로 취급됐다',
+        reason: 'the apostrophe was treated as a quote',
       );
-      // 그리고 그 뒤의 코드는 여전히 코드다.
+      // And the code after it is still code.
       expect(
         tokens.any(
           (t) => t.kind == DartTokenKind.keyword && t.text.contains('final'),
@@ -74,7 +80,7 @@ void main() {
       );
     });
 
-    test('문서 주석 안의 따옴표는 다음 줄로 새지 않는다', () {
+    test('a quote inside a doc comment does not leak into the next line', () {
       const source = "/// the API's shape\nconst a = 'x';\n";
       final tokens = tokenizeDart(source);
 
@@ -87,16 +93,17 @@ void main() {
     });
   });
 
-  group('보간 — 참조 corpus의 어려운 세 사례', () {
-    // 그대로 옮겼다. 따옴표를 단순히 짝지으면 세 번째가 문자열 / ✓는 코드 /
-    // ' : '는 문자열 / ✗는 코드로 그려진다 — 뒤집힌 채로, 그것도 그 조각이
-    // 보여주려는 바로 그 두 글자에서.
+  group('interpolation — the three hard sites of the reference corpus', () {
+    // Carried over verbatim. Naive quote-pairing draws the third as string /
+    // ✓ as code / ' : ' as string / ✗ as code — inverted, and on exactly the
+    // two glyphs that snippet exists to show.
     //
-    // 보간 안이 재귀적으로 토큰화되면서 "리터럴 전체가 토큰 하나"는 거짓이
-    // 되었다. 새 주장은 그보다 세다: 원래는 *쪼개지지 않았다*만 확인했지만,
-    // 이제는 **쪼개진 결과가 옳은지**를 확인한다 — quote-pair 스캐너가 실제로
-    // 저지르는 실패(안팎 반전)를 직접 겨눈다.
-    test('보간 안의 중첩된 빈 문자열', () {
+    // With the inside of an interpolation tokenized recursively, "the whole
+    // literal is one token" became false. The new claim is stronger: it used
+    // to check only that the literal *was not split*, and now it checks
+    // **whether the split result is right** — aiming straight at the failure
+    // a quote-pair scanner actually commits (inside and outside swapped).
+    test('a nested empty string inside an interpolation', () {
       const source = "final text = '\${newValue ?? ''}'.trim();";
       expectPartitions(source);
       expect(streamOf(source), [
@@ -109,7 +116,7 @@ void main() {
         'plain|newValue ',
         'punctuation|??',
         'plain| ',
-        "string|''", // 중첩된 빈 문자열이 문자열로 나온다
+        "string|''", // the nested empty string comes out as a string
         'punctuation|}',
         "string|'",
         'punctuation|.',
@@ -118,7 +125,7 @@ void main() {
       ]);
     });
 
-    test('join 안에서 쉼표를 든 중첩 문자열', () {
+    test('a nested string holding a comma, inside join', () {
       const source = "': \${selected.join(', ')}',";
       expectPartitions(source);
       expect(streamOf(source), [
@@ -128,16 +135,17 @@ void main() {
         'punctuation|.',
         'function|join',
         'punctuation|(',
-        "string|', '", // 쉼표가 든 중첩 문자열이 바깥을 끝내지 않는다
+        "string|', '", // the nested string with a comma does not end the outer
         'punctuation|)}',
         "string|'",
         'punctuation|,',
       ]);
     });
 
-    test('보간 둘, 그중 하나는 문자열 둘의 삼항을 품는다', () {
-      // 이 패키지의 주장이 스트림으로 드러나는 자리다. 중첩된 '✓'와 '✗'가
-      // **문자열로** 나오고, 그것을 감싼 조건식은 코드로 나온다.
+    test('two interpolations, one holding a ternary of two strings', () {
+      // This is where the package's claim shows up in the stream. The nested
+      // '✓' and '✗' come out **as strings**, and the conditional around them
+      // comes out as code.
       const source = "'\${term.value ? '✓' : '✗'} \${term.key}',";
       expectPartitions(source);
       expect(streamOf(source), [
@@ -148,11 +156,11 @@ void main() {
         'plain|value ',
         'punctuation|?',
         'plain| ',
-        "string|'✓'", // ← 문자열이다. quote-pair 스캐너는 여기를 코드로 칠한다
+        "string|'✓'", // ← a string. A quote-pair scanner paints this as code
         'plain| ',
         'punctuation|:',
         'plain| ',
-        "string|'✗'", // ← 마찬가지
+        "string|'✗'", // ← likewise
         'punctuation|}',
         'string| ',
         'punctuation|\${',
@@ -165,26 +173,29 @@ void main() {
       ]);
     });
 
-    test('그리고 보간된 문자열 안의 중괄호는 닫는 중괄호가 아니다', () {
-      const source = "'\${map['{']}'";
-      expectPartitions(source);
-      expect(streamOf(source), [
-        "string|'",
-        'punctuation|\${',
-        'plain|map',
-        'punctuation|[',
-        "string|'{'", // 이 중괄호가 보간을 끝냈다면 뒤가 전부 어긋난다
-        'punctuation|]}',
-        "string|'",
-      ]);
-    });
+    test(
+      'and a brace inside an interpolated string is not the closing brace',
+      () {
+        const source = "'\${map['{']}'";
+        expectPartitions(source);
+        expect(streamOf(source), [
+          "string|'",
+          'punctuation|\${',
+          'plain|map',
+          'punctuation|[',
+          "string|'{'", // ending the interpolation here would drift the rest
+          'punctuation|]}',
+          "string|'",
+        ]);
+      },
+    );
   });
 
-  group('드물지만 망가지면 안 되는 구문', () {
-    // 2026-09-02에 가정이 아니라 grep으로 확인한 결과, 아래 중 무엇도 참조
-    // corpus에 없었다. 그래도 처리한다 — 각각 몇 줄이면 되고, 소비자의 코드는
-    // 얌전할 의무가 없다.
-    test('원시 문자열은 escape를 처리하지 않는다', () {
+  group('rare constructs that must not break', () {
+    // Checked with grep on 2026-09-02, not assumed: none of the below was in
+    // the reference corpus. They are handled anyway — each costs a few lines,
+    // and the consumer's code is under no obligation to be tame.
+    test('a raw string does not handle escapes', () {
       const source = r"final p = r'a\' + 1;";
       final tokens = tokenizeDart(source);
 
@@ -196,12 +207,12 @@ void main() {
         strings.single.text,
         r"r'a\'",
         reason:
-            '백슬래시가 escape로 처리되어 닫는 따옴표를 건너뛰었고, '
-            '줄의 나머지가 문자열 색이 되었다',
+            'the backslash was handled as an escape and skipped the closing '
+            'quote, and the rest of the line took the string colour',
       );
     });
 
-    test('삼중 따옴표 문자열은 여러 줄에 걸친다', () {
+    test('a triple-quoted string spans lines', () {
       const source = "const a = '''\nline\n''';\n";
       final tokens = tokenizeDart(source);
 
@@ -212,7 +223,7 @@ void main() {
       expect(strings.single.text, "'''\nline\n'''");
     });
 
-    test('블록 주석은 Dart가 그러하고 C가 그러하지 않듯 중첩된다', () {
+    test('block comments nest, as in Dart and not in C', () {
       const source = 'a /* outer /* inner */ still outer */ b';
       final tokens = tokenizeDart(source);
 
@@ -223,15 +234,15 @@ void main() {
       expect(
         comments.single.text,
         '/* outer /* inner */ still outer */',
-        reason: '첫 */에서 멈춰서 꼬리가 잘못 칠해졌다',
+        reason: 'it stopped at the first */ and the tail was mis-coloured',
       );
-      // 부수 조건: `b`는 여전히 주석 밖이다.
+      // Side condition: `b` is still outside the comment.
       expect(tokens.last.text.trim(), 'b');
     });
 
-    test('닫히지 않은 문자열은 파일 끝이 아니라 개행에서 멈춘다', () {
-      // 이 스캐너가 이해하지 못하는 구문의 피해를 파일의 나머지가 아니라
-      // 그것이 있는 줄에 가둔다.
+    test('an unclosed string stops at the newline, not at the end of file', () {
+      // Confines the damage from syntax this scanner does not understand to
+      // the line it is on, rather than the rest of the file.
       const source = "final a = 'oops\nfinal b = 2;\n";
       final tokens = tokenizeDart(source);
 
@@ -245,18 +256,20 @@ void main() {
           (t) => t.kind == DartTokenKind.keyword && t.text.contains('final'),
         ),
         isTrue,
-        reason: '둘째 줄이 닫히지 않은 문자열에 삼켜졌다',
+        reason: 'the second line was swallowed by the unclosed string',
       );
     });
 
-    test('그리고 닫히지 않은 보간도 거기서 멈춘다', () {
-      // 위의 경계는 조건 없이 진술되어 있었고 구멍이 있었다: `${`가 스캐닝을
-      // 보간 스캐너에 넘겼는데 그쪽에는 자기 개행 경계가 없어 파일 끝을
-      // 돌려주었다. 두 글자가 보장을 빠져나가기에 충분했고, 위의 테스트는
-      // `'oops`에 `$`가 없어서 그것을 볼 수 없었다.
+    test('and an unclosed interpolation stops there too', () {
+      // The boundary above was stated without conditions, and it had a hole:
+      // `${` handed scanning to the interpolation scanner, which had no
+      // newline boundary of its own and returned the end of the file. Two
+      // characters were enough to slip out of the guarantee, and the test
+      // above could not see it because `'oops` has no `$`.
       //
-      // 재귀 토큰화 뒤에도 그 경계는 그대로다. 이제는 스트림 전체로 확인한다 —
-      // 둘째 줄이 코드로 나오는 것이 눈에 보인다.
+      // The boundary still holds after recursive tokenizing. It is now
+      // checked against the whole stream — the second line coming out as code
+      // is plain to see.
       const source = "final a = '\${oops\nfinal b = 2;\n";
       expectPartitions(source);
       expect(streamOf(source), [
@@ -266,8 +279,8 @@ void main() {
         'plain| ',
         "string|'",
         'punctuation|\${',
-        'plain|oops\n', // 개행에서 보간이 끝난다
-        'keyword|final', // 그리고 둘째 줄은 코드로 돌아온다
+        'plain|oops\n', // the interpolation ends at the newline
+        'keyword|final', // and the second line comes back as code
         'plain| b ',
         'punctuation|=',
         'plain| ',
@@ -275,104 +288,118 @@ void main() {
         'punctuation|;',
         'plain|\n',
       ]);
-      // 부수 조건 — 둘째 줄이 문자열에 삼켜지지 않았다.
+      // Side condition — the second line was not swallowed by a string.
       expect(
         tokenizeDart(
           source,
         ).where((t) => t.kind == DartTokenKind.keyword).length,
         2,
-        reason: '파일의 나머지가 문자열 하나로 칠해졌다',
+        reason: 'the rest of the file was painted as one string',
       );
     });
   });
 
-  group('보간 안의 주석 — 두 스캐너가 어긋났던 자리', () {
-    // 보간의 끝은 중괄호를 세는 스캐너가 정하고, 그 안은 바깥과 같은 디스패치가
-    // 다시 훑는다. 둘이 어긋나면 경계가 틀린다.
-    //
-    // 실제로 어긋났었다. 중괄호 세는 쪽이 주석을 몰라서 주석 **안의** 중괄호를
-    // 보간의 끝으로 삼았고, 그 결과 아래 첫 입력에서 주석이 반토막 나고 나머지가
-    // 문자열이 되었다. 그리고 이것들은 전부 **유효한 Dart이고 실제로 실행된다** —
-    // 망가진 입력을 방어하는 이야기가 아니다.
-    test('블록 주석 안의 중괄호는 보간을 끝내지 않는다', () {
-      const source = "'\${a /* } */ + 1}'";
-      expectPartitions(source);
-      expect(streamOf(source), [
-        "string|'",
-        'punctuation|\${',
-        'plain|a ',
-        'comment|/* } */', // 반토막 나면 여기가 `/* ` 가 된다
-        'plain| ',
-        'punctuation|+',
-        'plain| ',
-        'number|1',
-        'punctuation|}',
-        "string|'",
-      ]);
-    });
+  group(
+    'comments inside an interpolation — where the two scanners drifted',
+    () {
+      // The end of an interpolation is set by the brace-counting scanner, and
+      // its inside is walked again by the same dispatch as the outside. If the
+      // two drift apart, the boundary is wrong.
+      //
+      // They really did drift. The brace-counting side did not know about
+      // comments and took a brace **inside** a comment as the end of the
+      // interpolation, so in the first input below the comment was cut in half
+      // and the rest became string. And all of these are **valid Dart that
+      // actually runs** — this is not a story about defending against broken
+      // input.
+      test('a brace inside a block comment does not end the interpolation', () {
+        const source = "'\${a /* } */ + 1}'";
+        expectPartitions(source);
+        expect(streamOf(source), [
+          "string|'",
+          'punctuation|\${',
+          'plain|a ',
+          'comment|/* } */', // cut in half, this would be `/* `
+          'plain| ',
+          'punctuation|+',
+          'plain| ',
+          'number|1',
+          'punctuation|}',
+          "string|'",
+        ]);
+      });
 
-    test('삼중 따옴표 안에서 줄 주석이 여러 줄에 걸쳐도', () {
-      const source = "'''\${a // c\n}'''";
-      expectPartitions(source);
-      expect(streamOf(source), [
-        "string|'''",
-        'punctuation|\${',
-        'plain|a ',
-        'comment|// c',
-        'plain|\n',
-        'punctuation|}',
-        "string|'''",
-      ]);
-    });
+      test('even when a line comment spans lines inside triple quotes', () {
+        const source = "'''\${a // c\n}'''";
+        expectPartitions(source);
+        expect(streamOf(source), [
+          "string|'''",
+          'punctuation|\${',
+          'plain|a ',
+          'comment|// c',
+          'plain|\n',
+          'punctuation|}',
+          "string|'''",
+        ]);
+      });
 
-    test('주석 안의 따옴표가 문자열을 열지 않는다 — 한때 던지던 입력', () {
-      // 퍼징이 찾아낸 최소 재현. 고치기 전에는 `RangeError`로 죽었다 —
-      // 잘린 끝이 앞선 끝보다 뒤로 가서 `substring`이 던졌다. 라이브러리가 파는
-      // 유일한 보장이 예외로 깨지는 것은 partition이 깨지는 것보다 나쁘다.
-      const source = "'\${/*'*/'}\\n'}'";
-      expectPartitions(source);
-      expect(streamOf(source), [
-        "string|'",
-        'punctuation|\${',
-        "comment|/*'*/",
-        "string|'}",
-        'escape|\\n',
-        "string|'",
-        'punctuation|}',
-        "string|'",
-      ]);
-    });
+      test('a quote inside a comment does not open a string — once a throwing '
+          'input', () {
+        // A minimal repro found by fuzzing. Before the fix it died with a
+        // `RangeError` — the clamped end went behind the previous end and
+        // `substring` threw. The library's only guarantee breaking with an
+        // exception is worse than the partition breaking.
+        const source = "'\${/*'*/'}\\n'}'";
+        expectPartitions(source);
+        expect(streamOf(source), [
+          "string|'",
+          'punctuation|\${',
+          "comment|/*'*/",
+          "string|'}",
+          'escape|\\n',
+          "string|'",
+          'punctuation|}',
+          "string|'",
+        ]);
+      });
 
-    test('닫히지 않은 줄 주석은 보간과 문자열을 함께 끝낸다', () {
-      // `'\${a // b}'`에는 개행이 없으므로 주석이 입력 끝까지 간다. 유효한
-      // Dart가 아니고, 피해가 그 줄에 갇히는 것이 맞다.
-      const source = "'\${a // b}'";
-      expectPartitions(source, expectClassified: false);
-      expect(streamOf(source), [
-        "string|'",
-        'punctuation|\${',
-        'plain|a ',
-        "comment|// b}'",
-      ]);
-    });
+      test('an unclosed line comment ends the interpolation and the string '
+          'together', () {
+        // `'\${a // b}'` has no newline, so the comment runs to the end of the
+        // input. It is not valid Dart, and the damage being confined to that
+        // line is right.
+        const source = "'\${a // b}'";
+        expectPartitions(source, expectClassified: false);
+        expect(streamOf(source), [
+          "string|'",
+          'punctuation|\${',
+          'plain|a ',
+          "comment|// b}'",
+        ]);
+      });
 
-    test('보간 안의 원시 문자열은 경계를 다르게 정한다', () {
-      // 중괄호 세는 쪽도 `r` 접두사를 봐야 한다. 보지 않으면 `\'`를 escape로
-      // 읽어 닫는 따옴표를 지나치고, 보간의 끝을 엉뚱한 곳에서 찾는다.
-      const source = "'\${r'a\\'}'";
-      expectPartitions(source);
-      expect(streamOf(source), [
-        "string|'",
-        'punctuation|\${',
-        "string|r'a\\'",
-        'punctuation|}',
-        "string|'",
-      ]);
-    });
-  });
+      test(
+        'a raw string inside an interpolation sets the boundary differently',
+        () {
+          // The brace-counting side has to check the `r` prefix too. Without
+          // it, it reads `\'` as an escape, runs past the closing quote, and
+          // looks for the end of the interpolation in the wrong place.
+          const source = "'\${r'a\\'}'";
+          expectPartitions(source);
+          expect(streamOf(source), [
+            "string|'",
+            'punctuation|\${',
+            "string|r'a\\'",
+            'punctuation|}',
+            "string|'",
+          ]);
+        },
+      );
+    },
+  );
 
-  group('분류', () {
-    test('키워드, 숫자, 구두점은 자기 자신으로 나온다', () {
+  group('classification', () {
+    test('keywords, numbers and punctuation come out as themselves', () {
       const source = 'const x = 0xFF + 1.5e3;';
       final tokens = tokenizeDart(source);
 
@@ -388,29 +415,38 @@ void main() {
       expect(numbers, ['0xFF', '1.5e3']);
     });
 
-    test('정수 뒤의 점은 리터럴의 일부가 아니다', () {
+    test('a dot after an integer is not part of the literal', () {
       const source = '1.toString()';
       final tokens = tokenizeDart(source);
 
       expectPartitions(source);
       expect(tokens.first.kind, DartTokenKind.number);
-      expect(tokens.first.text, '1', reason: '메서드 이름이 숫자 리터럴에 먹혔다');
+      expect(
+        tokens.first.text,
+        '1',
+        reason: 'the method name was eaten by the number literal',
+      );
     });
 
-    test('같은 kind의 인접한 run은 하나로 합쳐진다', () {
-      // 미관 문제가 아니다. 위젯 층은 토큰 하나를 `TextSpan` 하나로 만들고,
-      // `SelectableText`는 트리가 같지 않다고 비교될 때마다 컨트롤러를 다시
-      // 만드는데 `TextSpan`의 동등성은 깊은 순회다. 괄호마다 스팬을 만들면
-      // 눈에 보이는 이득 없이 리빌드마다 수천 번의 `TextStyle` 비교가 붙는다.
+    test('adjacent runs of the same kind are coalesced into one', () {
+      // It is not cosmetic. The widget layer turns one token into one
+      // `TextSpan`, `SelectableText` rebuilds its controller whenever the tree
+      // compares unequal, and `TextSpan` equality is a deep walk. A span per
+      // bracket would put thousands of `TextStyle` comparisons on every
+      // rebuild to no visible end.
       final tokens = tokenizeDart('((( )))');
 
       expectPartitions('((( )))');
-      expect(tokens, hasLength(3), reason: '구두점 / 공백 / 구두점이지 일곱 개의 토큰이 아니다');
+      expect(
+        tokens,
+        hasLength(3),
+        reason: 'punctuation / whitespace / punctuation, not seven tokens',
+      );
     });
 
-    test('ASCII가 아닌 글리프는 토큰 하나로 살아남는다', () {
-      // 스캐너가 코드 단위 단위로 전진하므로, 이것은 대리 쌍이 두 스팬으로
-      // 쪼개지지 않고 다시 붙는다는 주장이다.
+    test('a non-ASCII glyph survives as one token', () {
+      // The scanner advances one code unit at a time, so this is a claim that
+      // a surrogate pair is not split into two spans but joined back up.
       const source = "// an em dash — and a check ✓\n";
       final tokens = tokenizeDart(source);
 

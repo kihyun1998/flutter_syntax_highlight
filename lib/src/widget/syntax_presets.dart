@@ -1,29 +1,34 @@
 part of 'syntax_palette.dart';
 
-// 이름 붙은 프리셋의 **데이터**만 여기 산다. 선언은 [SyntaxPalette] 안에 있고
-// 여기 상수를 가리킨다 — 호출부는 `SyntaxPalette.solarizedDark`다.
+// Only the **data** of the named presets lives here. The declarations are
+// inside [SyntaxPalette] and point at the constants here; call sites read
+// `SyntaxPalette.solarizedDark`.
 //
-// 파일을 나눈 이유는 변경 축이 다르기 때문이다. [SyntaxPalette] 자신은 이 패키지의
-// 이음매이고 kind가 늘 때 바뀐다. 아래 값들은 제3자 테마에서 온 데이터이고
-// `NOTICES`와 함께 움직인다. 한 파일에 두면 두 가지 이유로 같은 파일이 바뀐다.
+// The files are split because their axes of change differ. [SyntaxPalette]
+// itself is this package's seam and changes when the kinds grow. The values
+// below are data from third-party themes and move together with `NOTICES`.
+// Kept in one file, that file would change for two reasons.
 
 const _italic = FontStyle.italic;
 // ───────────────────────────────────────────────────────────────────────
-// 이름 붙은 프리셋
+// Named presets
 //
-// **재현이 아니라 발췌다.** 원본 테마들은 TextMate scope 수십~수백 개에 색을
-// 매기고 이 패키지의 kind는 여덟이다. 각 프리셋은 원본이 그 여덟에 해당하는
-// scope에 준 색을 뽑아 온 것이라, 원본 에디터와 똑같이 보이지 않는다.
+// **An excerpt, not a reproduction.** The upstream themes assign colours to
+// tens to hundreds of TextMate scopes, and this package has eight kinds. Each
+// preset pulls out the colours the upstream gave to the scopes that match
+// those eight, so it does not look identical to the original editor.
 //
-// 값의 출처는 파일과 커밋까지 `NOTICES`에 적혀 있다. 같은 테마도 판본마다
-// 라이선스가 다르므로, 그 기록이 없으면 나중에 그 판정을 다시 할 수 없다.
+// The source of each value is recorded in `NOTICES`, down to the file and the
+// commit. The same theme is licensed differently from version to version, so
+// without that record the finding could not be made again later.
 //
-// 기본값은 이것들이 **아니다.** [SyntaxPalette.fromColorScheme]만이 라이트와
-// 다크 양쪽에서 설정 없이 맞는다. 실명 프리셋은 정의상 하드코딩된 팔레트라
-// 반대 밝기에서 깨지고, 그래서 원본에 짝이 있으면 짝으로 싣는다.
+// The default is **not** one of these. Only [SyntaxPalette.fromColorScheme]
+// fits both light and dark with no configuration. A named preset is by
+// definition a hard-coded palette and breaks at the opposite brightness, so
+// where the original has a pair, it ships as a pair.
 // ───────────────────────────────────────────────────────────────────────
 
-/// Solarized Dark에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Solarized Dark. Not a reproduction.
 const _solarizedDark = SyntaxPalette(
   background: Color(0xFF002B36),
   plain: TextStyle(color: Color(0xFF839496)),
@@ -36,7 +41,7 @@ const _solarizedDark = SyntaxPalette(
   function: TextStyle(color: Color(0xFF268BD2)),
 );
 
-/// Solarized Light에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Solarized Light. Not a reproduction.
 const _solarizedLight = SyntaxPalette(
   background: Color(0xFFFDF6E3),
   plain: TextStyle(color: Color(0xFF657B83)),
@@ -49,10 +54,10 @@ const _solarizedLight = SyntaxPalette(
   function: TextStyle(color: Color(0xFF268BD2)),
 );
 
-/// One Dark에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from One Dark. Not a reproduction.
 ///
-/// 이름이 `atomOneDark`가 아닌 것은 `ATOM`이 GitHub의 상표이기 때문이다. 값은
-/// `atom/one-dark-syntax`에서 왔고 그 파일의 라이선스는 MIT다.
+/// It is not named `atomOneDark` because `ATOM` is a GitHub trademark. The
+/// values come from `atom/one-dark-syntax`, and that file is MIT-licensed.
 const _oneDark = SyntaxPalette(
   background: Color(0xFF282C34),
   plain: TextStyle(color: Color(0xFFABB2BF)),
@@ -65,7 +70,7 @@ const _oneDark = SyntaxPalette(
   function: TextStyle(color: Color(0xFF61AFEF)),
 );
 
-/// One Light에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from One Light. Not a reproduction.
 const _oneLight = SyntaxPalette(
   background: Color(0xFFFAFAFA),
   plain: TextStyle(color: Color(0xFF383A42)),
@@ -78,11 +83,12 @@ const _oneLight = SyntaxPalette(
   function: TextStyle(color: Color(0xFF4078F2)),
 );
 
-/// Monokai에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Monokai. Not a reproduction.
 ///
-/// 주석이 기울지 않는 유일한 프리셋이다 — 원본이 그렇다. `escape`가 `number`와
-/// 같은 색인 것도 원본 그대로다: 이 테마에는 `constant.character.escape` 전용
-/// 규칙이 없어 상위 `constant` 규칙에 흡수된다.
+/// The only preset whose comments are not italic, because the original's are
+/// not. `escape` sharing `number`'s colour is also as in the original: this
+/// theme has no dedicated rule for `constant.character.escape`, so it is
+/// absorbed into the parent `constant` rule.
 const _monokai = SyntaxPalette(
   background: Color(0xFF272822),
   plain: TextStyle(color: Color(0xFFF8F8F2)),
@@ -95,14 +101,15 @@ const _monokai = SyntaxPalette(
   function: TextStyle(color: Color(0xFFA6E22E)),
 );
 
-/// Gruvbox Dark에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Gruvbox Dark. Not a reproduction.
 ///
-/// 값이 Vim 정본이 아니라 MIT 이식본에서 왔다 — `morhetz/gruvbox`에는 LICENSE
-/// 파일이 없고 저작권자 문장이 존재하지 않아 `NOTICES`에 옮겨 적을 원문이
-/// 없다. 대가로 두 슬롯의 충실도를 내줬다: 이식본은 `escape`를 `constant`
-/// 규칙에 흡수하고 함수를 노랑으로 칠하는데, 정본은 escape에 고유한 주황을
-/// 주고 함수를 초록+굵게 한다. **두 값 집합을 섞지 않았다** — 섞으면 어디에도
-/// 존재하지 않는 팔레트가 된다.
+/// The values come from an MIT port, not the canonical Vim version:
+/// `morhetz/gruvbox` has no LICENSE file and no copyright-holder statement, so
+/// there is no original text to copy into `NOTICES`. The price was fidelity in
+/// two slots: the port absorbs `escape` into the `constant` rule and colours
+/// functions yellow, whereas the canonical version gives escapes their own
+/// orange and makes functions green and bold. **The two sets of values were
+/// not mixed**: mixing them would make a palette that exists nowhere.
 const _gruvboxDark = SyntaxPalette(
   background: Color(0xFF282828),
   plain: TextStyle(color: Color(0xFFEBDBB2)),
@@ -115,7 +122,8 @@ const _gruvboxDark = SyntaxPalette(
   function: TextStyle(color: Color(0xFFFABD2F)),
 );
 
-/// Gruvbox Light에서 **발췌**한 색. 재현이 아니다. [gruvboxDark] 참조.
+/// Colours **excerpted** from Gruvbox Light. Not a reproduction. See
+/// [gruvboxDark].
 const _gruvboxLight = SyntaxPalette(
   background: Color(0xFFFBF1C7),
   plain: TextStyle(color: Color(0xFF3C3836)),
@@ -128,7 +136,7 @@ const _gruvboxLight = SyntaxPalette(
   function: TextStyle(color: Color(0xFFB57614)),
 );
 
-/// Tokyo Night에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Tokyo Night. Not a reproduction.
 const _tokyoNight = SyntaxPalette(
   background: Color(0xFF1A1B26),
   plain: TextStyle(color: Color(0xFFA9B1D6)),
@@ -141,10 +149,11 @@ const _tokyoNight = SyntaxPalette(
   function: TextStyle(color: Color(0xFF7AA2F7)),
 );
 
-/// Tokyo Night Light에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Tokyo Night Light. Not a reproduction.
 ///
-/// 이 프리셋의 `escape`(`#363C4D`)는 본문(`#343B59`)과 육안으로 거의 구분되지
-/// 않는다. **원본이 그렇게 정의했고, 추측으로 고칠 근거가 없어 그대로 싣는다.**
+/// This preset's `escape` (`#363C4D`) is barely distinguishable by eye from the
+/// body text (`#343B59`). **The original defines it that way, and there are no
+/// grounds to fix it by guess, so it ships as is.**
 const _tokyoNightLight = SyntaxPalette(
   background: Color(0xFFE6E7ED),
   plain: TextStyle(color: Color(0xFF343B59)),
@@ -157,7 +166,7 @@ const _tokyoNightLight = SyntaxPalette(
   function: TextStyle(color: Color(0xFF2959AA)),
 );
 
-/// Cobalt2에서 **발췌**한 색. 재현이 아니다.
+/// Colours **excerpted** from Cobalt2. Not a reproduction.
 const _cobalt2 = SyntaxPalette(
   background: Color(0xFF193549),
   plain: TextStyle(color: Color(0xFFFFFFFF)),

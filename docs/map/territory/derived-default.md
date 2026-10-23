@@ -30,7 +30,7 @@ From ADR-0003 and the `fromColorScheme` comments:
   and 29.9 (clearly visible). Contrast ratio was not the constraint, and could
   not measure the change.
 - Tests check the *property*, not the coefficient: pulled colours lie between
-  anchor and target (ADR-0003, *계수를 값으로 못 박지 않는다*).
+  anchor and target (ADR-0003, *The coefficient is not nailed down as a value*).
 - `plain` and `background` are left unset.
 
 ## Code
@@ -67,6 +67,6 @@ From ADR-0003 and the `fromColorScheme` comments:
 ## Known holes / open
 
 - Two source texts still say the derived default reads only three roles:
-  `SyntaxPalette`'s class doc (*기본값은 소비자의 `ColorScheme`에서 파생된다*)
-  and GLOSSARY.md (*색상을 더하지 않는다*). Since ADR-0003 it also reads
+  `SyntaxPalette`'s class doc (*The default is derived from the consumer's `ColorScheme`*)
+  and GLOSSARY.md (*Hue-neutral*). Since ADR-0003 it also reads
   `primary` and `tertiary`.

@@ -14,8 +14,8 @@ topics:
   - text
   - widget
 
-# 하한은 flutter_smooth_wheel_scroll의 것이다. 그것이 Flutter 3.32 / Dart 3.8을
-# 요구하므로 이보다 낮게 적으면 거짓이 된다.
+# The lower bound is flutter_smooth_wheel_scroll's. It requires Flutter 3.32 /
+# Dart 3.8, so writing anything lower would be false.
 environment:
   sdk: ^3.8.0
   flutter: ">=3.32.0"
@@ -30,8 +30,9 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 
-# `flutter:` 절은 두지 않는다. asset도 font도 없어서 빈 키만 남고, 빈 키는
-# 뭔가 있다가 지워진 것처럼 읽힌다.
+# There is no `flutter:` section. With no assets and no fonts only an empty key
+# would be left, and an empty key reads as if something had been there and was
+# deleted.
 
 screenshots:
   - description: >-

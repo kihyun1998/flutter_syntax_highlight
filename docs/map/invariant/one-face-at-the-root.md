@@ -12,8 +12,8 @@ The widget names the face; the palettes — derived, preset, or a consumer's own
 — supply the leaf styles that merge under it. They never call each other. A leaf
 that names a family wins over the root for its span, while a guard that reads
 the outer `EditableText.style` stays green (`syntax_palette.dart —
-SyntaxPalette` class doc, *어떤 스타일도 fontFamily를 지정하지 않는다*: "하드
-룰이다"). So the root-side rule and the leaf-side rule must both hold.
+SyntaxPalette` class doc, *No style specifies `fontFamily`*: "This is a
+hard rule"). So the root-side rule and the leaf-side rule must both hold.
 
 ## Territories it holds in
 
@@ -32,10 +32,8 @@ aligned, with the widget-level font tests still green.
 
 ## Discovery history
 
-- Tests on both sides: `test/widget/syntax_palette_test.dart` group `어떤
-  스타일도 fontFamily를 지정하지 않는다`; `test/widget/presets_test.dart` `어떤
-  프리셋도 fontFamily를 지목하지 않는다`; `test/widget/syntax_text_test.dart`
-  `그리고 어떤 잎도 자기 family를 들이지 않는다`.
+- Tests on both sides: `test/widget/syntax_palette_test.dart` group `no style specifies a fontFamily`; `test/widget/presets_test.dart` `no preset names a fontFamily`; `test/widget/syntax_text_test.dart`
+  `and no leaf brings in a family of its own`.
 
 ## Where it will recur
 
