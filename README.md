@@ -206,9 +206,10 @@ SyntaxText(
   parameter — a wrapped line is a different line. `scrollable` governs the
   vertical axis only: `false` shrink-wraps, for a code block inside prose;
   `true` scrolls within its own box.
-- **Dragging sideways over the text does not scroll it** — the selection gesture
-  takes horizontal drags. The scrollbar is the sideways affordance on touch; on
-  desktop, trackpad and wheel work. On Android, where a Material scrollbar is
+- **On Android, dragging sideways over the text does not scroll it** — the
+  selection gesture takes horizontal drags, so the scrollbar is the sideways
+  affordance there. On iOS the drag scrolls the text; on desktop, trackpad and
+  wheel work. On Android, where a Material scrollbar is
   hidden and not draggable by default, `SyntaxText` shows its horizontal bar and
   makes it draggable unless your `ScrollbarThemeData` sets `thumbVisibility` or
   `interactive` itself — a value you set wins. Both scrollbars sit at the edges

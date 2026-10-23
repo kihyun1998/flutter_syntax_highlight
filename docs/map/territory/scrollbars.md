@@ -26,6 +26,12 @@ From ADR-0004 and `_SyntaxTextState.build` comments:
 - **Horizontal bar outside the vertical view** with
   `notificationPredicate: depth == (scrollable ? 1 : 0)`, so it sits at the
   widget's bottom, not after the last line.
+- **iOS needs no fill.** Since the bar moved outside (#29), the iOS thumb
+  drags with the defaults: 140 px moves 361.3 on the iPhone 17 simulator,
+  hidden or visible, with or without a long press. Before #29 a widget test
+  read 0.0 with `scrollable: true`, the bar sitting after the last line
+  (Flutter 3.47.1, 2026-10-23, #30). The simulator figures come from pointer
+  events injected by an integration test; no real touch or device yet.
 - **Insets removed around the bars only** (`insetFree`): Material's
   `Scrollbar` feeds `MediaQuery.paddingOf` to its painter with no opt-out
   (Flutter 3.41.9). The code inside gets the original `MediaQuery` back, for
@@ -70,8 +76,6 @@ From ADR-0004 and `_SyntaxTextState.build` comments:
 
 ## Known holes / open
 
-- iOS: the horizontal bar measured 0.0 when dragged in widget tests; not
-  measured on simulator or device; Cupertino gestures differ. Tracked: #30.
 - Other non-Android platforms with a hidden thumb and selection-owned drags
   were not measured (ADR-0004).
 - `interactive: true` brings track taps with no separate switch in Material.

@@ -37,9 +37,9 @@ import 'syntax_palette.dart';
 ///
 /// ## Horizontal cannot be dragged. That is the price of being selectable
 ///
-/// Dragging horizontally over the text does not scroll. Vertically it does.
-/// Measured (2026-09-06, 300×300 viewport, 120px drag from the viewport
-/// centre):
+/// On Android, dragging horizontally over the text does not scroll. Vertically
+/// it does. Measured (2026-09-06, 300×300 viewport, 120px drag from the
+/// viewport centre):
 ///
 /// ```
 /// SelectableText         vertical 100.0   horizontal 0.0
@@ -50,10 +50,12 @@ import 'syntax_palette.dart';
 /// **The selection gesture takes the horizontal drag.** Switching to
 /// [SelectionArea] gives the same result, so it is not a problem with
 /// [SelectableText] but the price of selection itself. It cannot be fixed
-/// without giving up selection.
+/// without giving up selection. On iOS the selection gesture leaves the
+/// horizontal drag alone, and the text scrolls under the finger (#30).
 ///
-/// So the horizontal [Scrollbar] is not decoration but **the only horizontal
-/// affordance on touch**. On desktop, the trackpad and wheel also work. Anyone
+/// So on Android the horizontal [Scrollbar] is not decoration but **the only
+/// horizontal affordance on touch**. On desktop, the trackpad and wheel also
+/// work. Anyone
 /// who wants to strip the scrollbars from this widget must read this paragraph
 /// first.
 ///
@@ -470,10 +472,11 @@ class _SyntaxTextState extends State<SyntaxText> {
     // shrinks with it. (Each of those two cases has a test.)
     code = ColoredBox(color: background, child: code);
 
-    // The scrollbar is the only horizontal affordance on touch. This widget's
-    // doc says so, so changing the background cannot be allowed to bury it in
-    // the background. Only the colour is overridden and the app's other fields
-    // are kept: themes do not merge, and only the nearest one is read.
+    // The scrollbar is the only horizontal affordance on Android touch. This
+    // widget's doc says so, so changing the background cannot be allowed to
+    // bury it in the background. Only the colour is overridden and the app's
+    // other fields are kept: themes do not merge, and only the nearest one is
+    // read.
     return ScrollbarTheme(
       data: bars.copyWith(
         thumbColor: WidgetStatePropertyAll(chrome.withAlpha(115)),

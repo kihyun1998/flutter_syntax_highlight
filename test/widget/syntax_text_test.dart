@@ -544,7 +544,8 @@ void main() {
       // horizontal drag, and switching to `SelectionArea` is the same
       // (measured 2026-09-06). It cannot be fixed without giving up
       // selection, so the horizontal `Scrollbar` is the only affordance on
-      // touch.
+      // touch. This runs on the test default platform, Android; on iOS the
+      // drag scrolls (#30).
       //
       // This check exists because once that fact is forgotten, someone strips
       // the scrollbar out as "decoration".

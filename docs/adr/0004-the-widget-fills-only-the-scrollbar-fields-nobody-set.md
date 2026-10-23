@@ -57,3 +57,7 @@ The automatic bar of the `EditableText` inside `SelectableText` is kept. `Editab
 **The system gesture area is the app layer's job.** If the widget sits at the very bottom of the screen, the thumb falls into that area. On the emulator, drags there were only partly delivered (30.8, 77.1 / 127). The widget does not know where on the screen it sits, so it does not read `systemGestureInsets` to avoid it. The doc says so.
 
 **This narrows ADR-0002's "The widget's own controls follow the palette too".** What follows is the **colour**. Implementing that sentence as replacing the theme wholesale is why the consumer's opt-in became 0.0 under a preset.
+
+## Later record
+
+**iOS was fixed by the placement, not by a fill.** [#30](https://github.com/kihyun1998/flutter_syntax_highlight/issues/30) measured it on the iPhone 17 simulator (Flutter 3.47.1, 2026-10-23): with the defaults, dragging the horizontal thumb 140 px moves 361.3, and dragging the text itself moves 120 — on iOS the selection gesture does not take the horizontal drag. The 0.0 above reproduced only on the code before #29, where with `scrollable: true` the bar sat after the last line. So the fill stays Android-only, and "the only horizontal affordance on touch" holds on Android only.

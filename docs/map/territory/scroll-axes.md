@@ -22,10 +22,14 @@ From the `SyntaxText` class doc, measured where marked:
 - **Named controllers** so each `Scrollbar` has an unambiguous target. The
   reference's other reason (two views claiming `PrimaryScrollController`
   assert) was measured false, 2026-09-06.
-- **Horizontal drag over text does not scroll** — the selection gesture takes
-  it. Measured 2026-09-06 (300×300, 120 px drag): `SelectableText` and
-  `SelectionArea` 0.0 horizontal, plain `Text` 100.0. Hence the horizontal
-  scrollbar is the only horizontal affordance on touch.
+- **On Android, horizontal drag over text does not scroll** — the selection
+  gesture takes it. Measured 2026-09-06 (300×300, 120 px drag, test default
+  platform Android): `SelectableText` and `SelectionArea` 0.0 horizontal,
+  plain `Text` 100.0. Hence on Android the horizontal scrollbar is the only
+  horizontal affordance on touch.
+- **On iOS it scrolls.** A 140 px drag over the text moves 120 (touch slop
+  20), on the iPhone 17 simulator and in a widget test with an iOS override
+  (Flutter 3.47.1, 2026-10-23, #30).
 - Nesting: horizontal `SingleChildScrollView` inside, vertical outside it when
   `scrollable`; the horizontal bar is outside both (see scrollbars).
 
