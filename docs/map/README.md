@@ -7,6 +7,10 @@ A comment's why, trap and measured value go to a note here. Notes are added as
 they come up, or all at once with `grill-map`, which also reads hand-written
 notes as leads and keeps their paths.
 
+Before starting a new note, search this folder and the code symbol: an existing
+note usually holds the topic. A new note is named for what the system does
+there, not for the file.
+
 ## The two questions
 
 - **If I touch this, what else moves?** Open the territory that holds the code,

@@ -4,11 +4,11 @@
 
 The four commands that decide green, run by hand and each run bare, and the
 test suite and fixtures they run over. The command list and its scope are in
-`CLAUDE.md`, *게이트*; this note holds what depends on them.
+`CLAUDE.md`, *Gates*; this note holds what depends on them.
 
 ## Governing decisions
 
-**None.** The rules are in `CLAUDE.md` (*게이트*).
+**None.** The rules are in `CLAUDE.md` (*Gates*).
 
 ## Design model
 
@@ -17,9 +17,10 @@ From `CLAUDE.md` and `test/fixtures/README.md`:
 - Each gate runs bare, never through a pipe (a pipeline returns the last
   command's status).
 - The bar is not moved to get green.
-- Format scope includes `example/lib` (#21); `flutter analyze` already walked
-  it.
-- `flutter test` does not reach `example/`.
+- Format scope includes `example/lib` (#21): `flutter analyze` already walked
+  it, and pub.dev's example tab shows it to consumers as written.
+- `flutter test` does not reach `example/` (verified by planting a failing
+  test there).
 - Fixtures are `.dart.txt` because malformed input is the point and as `.dart`
   it failed format and analyze (65 / 16 errors, measured); making the corpus
   tidy would have moved the bar.
@@ -29,7 +30,7 @@ From `CLAUDE.md` and `test/fixtures/README.md`:
 
 ## Code
 
-- `CLAUDE.md` *게이트*; `analysis_options.yaml`; `test/**`;
+- `CLAUDE.md` *Gates*; `analysis_options.yaml`; `test/**`;
   `test/fixtures/README.md`.
 
 ## Reference behaviour
