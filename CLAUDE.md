@@ -45,6 +45,8 @@ same assumption. If it does, the fix lands with an invariant note under
 
 A comment says what the code is. Why it is this way, what it deliberately
 leaves out, the trap and the measured value go to the territory note under
-`docs/map/` (before starting a new note, read `docs/map/README.md`). History
-goes to the commit message. Comments written before this rule still carry the
-rest: move their content into the map before deleting one (`decant`).
+`docs/map/`. Where none seems to hold it, search the folder and the code symbol
+first; only then start a new note, named for what the system does there, not
+for the file. History goes to the commit message. Comments written before this
+rule still carry the rest: never delete one whose content the map does not yet
+hold — move it there first.
